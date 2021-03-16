@@ -69,16 +69,15 @@ gm_input <- tribble(
   "P03",           "B",   9,
   "P03",           "C",   5)
 
-step_1 <- group_by(gm_input, participant_id) %>%
-  mutate(session_time_m = sum(task_time_m))  %>% ungroup()
-
-step_2 <- group_by(step_1, participant_id) %>%
-  mutate(time_proportion = task_time_m / session_time_m)  %>% ungroup()
-
-step_3 <- group_by(step_2, task) %>%
-  summarise(mean_time_proportion = mean(time_proportion))
-
 # Answer:
 the_answer <- 
-  step_3                # TODO: replace NULL with your answer
+  gm_input %>% 
+  group_by(participant_id) %>%
+  mutate(session_time_m = sum(task_time_m)) %>% 
+  mutate(time_proportion = task_time_m / session_time_m) %>%
+  ungroup() %>%
+  group_by(task) %>%
+  summarise(mean_time_proportion = mean(time_proportion))
+  
+  # TODO: replace NULL with your answer
 

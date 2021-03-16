@@ -35,14 +35,13 @@ tw_input <- tribble(
   "P02",           "So",         18)
 
 
-step_1 <- pivot_wider(tw_input, names_from = day_of_week, values_from = glance_count)
-
-step_2 <- mutate(step_1, weekdays_count = Mo + Tu + We + Th + Fr, weekends_count = Sa + So)
-
-step_3 <- select(step_2, participant_id, weekdays_count, weekends_count)
-
-
 # Answer:
 the_answer <- 
-  step_3                # TODO: replace NULL with your answer
+  tw_input %>%
+  pivot_wider(names_from = day_of_week, values_from = glance_count) %>%
+  mutate(weekdays_count = Mo + Tu + We + Th + Fr, weekends_count = Sa + So) %>%
+  select(participant_id, weekdays_count, weekends_count)
+  
+  
+  # TODO: replace NULL with your answer
 

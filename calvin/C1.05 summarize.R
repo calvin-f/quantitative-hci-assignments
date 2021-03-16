@@ -29,10 +29,10 @@ gs_input <- tribble(
   "P03",           "y",   9,
   "P03",           "z",   5)
 
-gs_input_1 <- group_by(gs_input, participant_id)%>%
-  summarise(session_time_m = sum(task_time_m))
-
 # Answer:
 the_answer <- 
-  gs_input_1                # TODO: replace NULL with your answer
+  gs_input %>% 
+  group_by(participant_id) %>%
+  summarise(session_time_m = sum(task_time_m))
+# TODO: replace NULL with your answer
 

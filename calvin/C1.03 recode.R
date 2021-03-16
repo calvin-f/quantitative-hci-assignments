@@ -28,14 +28,14 @@ rc_input <- tribble(
   "I enjoy using the system.",                   5,
   "The visual design is aesthetically pleasing", 2)
 
-rc_input_1 <- mutate(rc_input, answer = as_factor(answer))
-
-rc_input_2 <- mutate(rc_input_1, answer = fct_recode(answer, "Strongly disagree" = "1", "Disagree" = "2", "Neutral" = "3", "Agree" = "4", "Strongly agree" = "5"))
-
-
 # Answer:
 the_answer <- 
-  rc_input_2                # TODO: replace NULL with your answer
+  rc_input %>%
+  mutate(answer = as_factor(answer)) %>%
+  mutate(answer = fct_recode(answer, "Strongly disagree" = "1", "Disagree" = "2", "Neutral" = "3", "Agree" = "4", "Strongly agree" = "5"))
+  
+  
+  # TODO: replace NULL with your answer
 
 
 #-------------------------------------------------------------------------------

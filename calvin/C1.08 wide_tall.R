@@ -34,10 +34,10 @@ wt_input <- tribble(
   "Susanne", "Boiled eggs", "Spaghetti", "Steak",
   "Rajit",   "Soup",        "Burger",    "Salad")
 
-
-step_1 <- pivot_longer(wt_input, cols = breakfast:dinner , names_to = "meal", values_to = "food")
-
 # Answer:
 the_answer <- 
-  step_1                # TODO: replace NULL with your answer
+  wt_input %>%
+  pivot_longer(cols = breakfast:dinner , names_to = "meal", values_to = "food")
+
+# TODO: replace NULL with your answer
 

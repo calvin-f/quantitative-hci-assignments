@@ -31,10 +31,8 @@ jn_input_l <- tribble(
   "Susanne",  "Spaghetti",   "neutral")
 
 
-step_1 <- inner_join(jn_input_b, jn_input_l, by = "name", suffix = c("_breakfast", "_lunch"))
-
-
 # Answer:
 the_answer <- 
-  step_1                # TODO: replace NULL with your answer
+  jn_input_b %>%
+  inner_join(jn_input_l, by = "name", suffix = c("_breakfast", "_lunch"))                # TODO: replace NULL with your answer
 

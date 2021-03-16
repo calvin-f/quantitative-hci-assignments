@@ -34,11 +34,10 @@ answer_levels <- c(
   `Agree` = "4",
   `Strongly agree` = "5")
 
-rr_input_1 <- mutate(rr_input, answer = fct_recode(answer, !!!answer_levels))
-
 # Answer:
 the_answer <- 
-  rr_input_1                # TODO: replace NULL with your answer
+  rr_input %>%
+  mutate(answer = fct_recode(answer, !!!answer_levels))                # TODO: replace NULL with your answer
 
 
 #-------------------------------------------------------------------------------

@@ -34,11 +34,11 @@ bd_input_bottom <- tribble(
   ~name, ~breakfast, ~lunch,
   "Rajit", "Soup", "Burger")
 
-
-step_1 <- bind_rows(bd_input, bd_input_bottom)
-step_2 <- bind_cols(step_1, bd_input_right)
-
 # Answer:
 the_answer <- 
-  step_2                # TODO: replace NULL with your answer
+  bd_input %>%
+  bind_rows(bd_input_bottom) %>%
+  bind_cols(bd_input_right)
+  
+  # TODO: replace NULL with your answer
 

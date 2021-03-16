@@ -52,11 +52,17 @@ mc_input <- tribble(
   "P09",           88,   7,
   "P10",           13,   9)
 
-mc_input_1 <- mutate(mc_input, age_group = if_else(between(age,0,2), "Baby", if_else(between(age,3,39), "Young adults", if_else(between(age, 40,59), "Middle-aged adults", "Old adults"))))
-
-mc_input_2 <- mutate(mc_input_1, score_level = case_when(score < 6 ~ "low", score >= 6 ~ "high"))
-
 # Answer:
 the_answer <- 
-  mc_input_2                # TODO: replace NULL with your answer
+  mc_input %>%
+  mutate(age_group = if_else(between(age,0,2), "Baby", 
+                        if_else(between(age,3,39), "Young adults", 
+                                if_else(between(age, 40,59), "Middle-aged adults", "Old adults")
+                                )
+                        )
+    ) %>%
+  mutate(score_level = case_when(score < 6 ~ "low", score >= 6 ~ "high"))
+
+
+# TODO: replace NULL with your answer
 

@@ -27,11 +27,11 @@ fo_input <- tribble(
   "Thorsten", "colorful chameleon",
   "Sanjiv",  "white dog")
 
-out_1 <- filter(fo_input, str_detect(pet, "dog"))
-out_2 <- arrange(out_1, desc(owner))
-
-
 # Answer:
 the_answer <- 
-  out_2                # TODO: replace NULL with your answer
+  fo_input %>%
+  filter(str_detect(pet, "dog")) %>%
+  arrange(desc(owner))
+  
+  # TODO: replace NULL with your answer
 
