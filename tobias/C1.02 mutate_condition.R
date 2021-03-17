@@ -63,7 +63,7 @@ the_answer <-
     age >= 60 ~ "Old adults"
     )) %>% 
   mutate(score_level = ifelse(score < 6, "low", "high") )
-the_answer
+
 
 # TODO: replace NULL with your answer
 
