@@ -28,6 +28,5 @@ lg_input <-
 # Answer:
 lg_input +
   theme(legend.position = "bottom") +
-  labs(x="Device", y = "Time")
-
-
+  labs(x="Device", y = "Time") + 
+  guides(col = guide_legend(title="Vision"))
