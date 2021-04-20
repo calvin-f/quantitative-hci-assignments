@@ -24,10 +24,10 @@ source("R/prepare_data.R")
 
 # Answer:
 data_knobology_within %>% 
-  mutate(label=if_else(device=='Touch', "", participant)) %>%               # TODO: add a step to replace the label on the `Touch` side with "" to hide them
-  ggplot(aes(x = device, y = time, group=interaction(vision,participant)))+  # TODO: add the `group` parameter
+  mutate(label=if_else(device=='Touch', "", participant)) %>% 
+  ggplot(aes(x = device, y = time, group=interaction(vision,participant))) +
 	  geom_point() +
 	  geom_line() +
-    geom_text(aes(label=label), nudge_x=-0.05)                       # TODO: replace NULL with a geom_text() call
+    geom_text(aes(label=label), nudge_x=-0.05)
 
 

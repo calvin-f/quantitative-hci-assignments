@@ -34,7 +34,7 @@ co_input_2 <-
 
 
 # Answer:
-co_answer_scale <- scale_color_manual(values = c(EyesFree="red", Peripheral="navyblue", EyesOn="#DE6464"))   # TODO: Edit this line to specify the color scale
+co_answer_scale <- scale_color_manual(values = c(EyesFree="red", Peripheral="navyblue", EyesOn="#DE6464"))
 
 co_answer_1 <- co_input_1 + co_answer_scale
 co_answer_2 <- co_input_2 + co_answer_scale

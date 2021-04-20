@@ -17,10 +17,9 @@ source("R/prepare_data.R")
 # or click on the dataframe in the Environment tab
 
 # Answer:
-import::from(ggbeeswarm, geom_beeswarm)          # TODO: import geom_beeswarm function (you must use import::from())
+import::from(ggbeeswarm, geom_beeswarm)
 
 data_knobology_resampled %>% 
   ggplot(aes(device, time))  +
   geom_beeswarm(alpha=0.2) 
-# TODO: make a beeswarm plot
 
