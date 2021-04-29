@@ -35,7 +35,7 @@ gl_input <- tribble(
 
 # Answer:
 
-gl_template <- "Dear {user_id},\n\nFor the participation in the study, you will receive the compensation of\n\n\t{compensation_chf} CHF.\n\nThank you!"  # TODO: Paste the content from the file `goals/glue_email_example.txt`, and modify it to use the column names of the input.
+gl_template <- "Dear {user_id},\n\nFor the participation in the study, you will receive the compensation of\n\n\t\t\t\t{compensation_chf} CHF.\n\nThank you!"  # TODO: Paste the content from the file `goals/glue_email_example.txt`, and modify it to use the column names of the input.
 
 the_answer <- 
   gl_input %>% 
