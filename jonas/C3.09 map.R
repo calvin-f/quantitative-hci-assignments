@@ -31,8 +31,9 @@ combine_coordinate <- function(df) {
 # Answer:
 the_answer <- 
   mp_input %>%
-  mutate(coordinate = map(coordinate, combine_coordinate)) %>%
-  unnest(coordinate)
+  mutate(combined = map(coordinate, combine_coordinate)) %>%
+  select(place, combined) %>%
+  unnest(combined)
   
 
 #-------------------------------------------------------------------------------
