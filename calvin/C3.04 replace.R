@@ -37,7 +37,7 @@ rp_input <- tribble(
 # Answer:
 
 # TODO: modify the following two regular expressions to match group and replace with reference to the group
-regex_find <- "[\s\S]*(P)[\s\S]*([1-9]+)[\s\S]*"
+regex_find <- "[\\s\\S]*(P)[\\s\\S]*([1-9]+)[\\s\\S]*"
 regex_replace <- "\\1\\2"
 
 the_answer <- 
