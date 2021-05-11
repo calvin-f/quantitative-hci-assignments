@@ -1,0 +1,49 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+##Imports
+```{r, results='hide'}
+  library('tidyverse')
+```
+
+
+##Dataset construction
+```{r, results='hide'}
+regex_parse <- "User([\\d]*)_[^_]*_([^\\.]*)\\.csv"
+
+participantInfo <- read_csv('participant_info.csv')
+
+isTouchTypist <- function(userId) {
+  s <- participantInfo %>% filter(user_id == userId) %>% slice(1)
+  return(s$is_touchtypist)
+}
+
+readLog <- function(fileName) {
+  csv_data <- read_csv(str_c('./log/', fileName))
+  userId <- as.double(str_replace(fileName, regex_parse, "\\1"))
+  logData <-
+    csv_data %>%
+    mutate(
+      length = str_length(csv_data$stimulus),
+      user_id = userId,
+      condition = str_replace(fileName, regex_parse, "\\2"),
+      typing_style = if_else(isTouchTypist(userId), "Non-touchtypist", "Touchtypist")
+    ) %>%
+    group_by(stimulus_index) %>%
+    filter(input_time_ms == max(input_time_ms)) %>%
+    mutate(wpm = ((length - 1) / 5) / input_time_ms * 60000) %>%
+    select(c(stimulus_index, wpm, user_id, condition, typing_style))
+  return(logData)
+}
+
+logFiles <- list.files('./log')
+logData <- tribble( ~ stimulus_index, ~ wpm, ~ user_id, ~ condition, ~ typing_style)
+
+for (file in logFiles) {
+  logData <- logData %>% add_row(readLog(file))
+}
+
+```
+
