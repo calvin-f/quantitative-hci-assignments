@@ -4,13 +4,23 @@ output: html_notebook
 ---
 
 ##Imports
-```{r, results='hide'}
-  library('tidyverse')
+```{r, results = 'hide'}
+library('tidyverse')
+library(lme4)
+library(lmerTest)                                                   # install.packages("lmerTest")
+import::from(MASS, mvrnorm)                                         # install.packages("MASS")
+import::from(broom.mixed, tidy)                                     # install.packages("broom.mixed")
+import::from(multcomp, glht, mcp, adjusted)                         # install.packages("multcomp")
+import::from(cowplot, plot_grid)                                    # install.packages("cowplot")
+import::from(modelr, add_residuals, add_predictions)                # install.packages("modelr")
+import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band)    # install.packages("qqplotr")
+import::from(car, leveneTest, sigmaHat)                             # install.packages("car")
+
 ```
 
 
 ##Dataset construction
-```{r, results='hide'}
+```{r, message=FALSE}
 regex_parse <- "User([\\d]*)_[^_]*_([^\\.]*)\\.csv"
 
 participantInfo <- read_csv('participant_info.csv')
@@ -39,11 +49,185 @@ readLog <- function(fileName) {
 }
 
 logFiles <- list.files('./log')
-logData <- tribble( ~ stimulus_index, ~ wpm, ~ user_id, ~ condition, ~ typing_style)
+data <- tribble( ~ stimulus_index, ~ wpm, ~ user_id, ~ condition, ~ typing_style)
 
 for (file in logFiles) {
-  logData <- logData %>% add_row(readLog(file))
+  data <- data %>% add_row(readLog(file))
+}
+
+#    step 1: tell R about factor order to create the indicator variable as we expect
+data    <- data    %>% mutate(typing_style = factor(typing_style, levels = c("Touchtypist", "Non-touchtypist")))
+
+```
+
+##Categorical - from lecture 08 / 09
+
+```{r}
+#   step 2: specification of the linear models
+m_data <- lmer(wpm ~ typing_style*condition+(1|user_id),data=data)
+
+```
+
+```{r}
+# inspection
+
+# check estimates of model parameters
+summary(m_data)
+
+tidy(m_data,        conf.int = TRUE)
+
+# check the model formulas
+formula(m_data)
+
+# check random-intercept coefficients
+coef(m_data)
+
+```
+
+
+
+```{r}
+m_data %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  tidy(conf.int = TRUE)
+
+m_data %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  summary(test = adjusted("holm")) %>%
+  tidy()
+
+```
+
+
+```{r, echo=T, warning=FALSE}
+model <- lmer(wpm ~ typing_style*condition+(1|user_id),data=data)
+
+formula(model)
+
+anova(model,type=3,test.statistic="F")
+
+summary(model)
+
+confint(model)
+
+model %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  tidy(conf.int = TRUE)
+
+model %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  summary(test = adjusted("holm")) %>%
+  tidy()
+
+summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
+```
+
+
+##From lecture 10
+```{r}
+m2_data <- lm(wpm ~ typing_style, data = data)
+```
+
+Plots
+```{r}
+# raw data
+p_data <- 
+  data %>% 
+  ggplot(aes(x = typing_style)) +
+  geom_violin(aes(y = wpm), color = NA, fill = "grey") +
+  geom_point(aes(y = wpm), shape = 1, position = position_jitter(width = 0.1)) +
+  labs(x = NULL, y = "WPM", title = "Skewed Data") +
+  expand_limits(y = 87)
+
+plot_grid(p_data, ncol = 1)
+
+# adding residuals
+df_data <- 
+  data %>% 
+  add_residuals(m2_data) %>% 
+  add_predictions(m2_data)
+
+# residual vs. predicted plot
+p_residual_data <- 
+  df_data %>% 
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_point(alpha = 0.5) +
+  labs(title = "data residual") 
+
+plot_grid(p_residual_data, ncol = 1)
+
+# QQ plot
+p_qq_data <- 
+  df_data %>% 
+  ggplot(aes(sample = resid)) + 
+    stat_qq_band() + 
+    stat_qq_line() + 
+    stat_qq_point(alpha = 0.5) +
+    labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "m_data residuals")
+
+plot_grid(p_qq_data, ncol = 1)
+
+# tests for normality and equal variance
+
+shapiro.test(residuals(m2_data))
+
+leveneTest(m2_data, center = "median")
+
+```
+
+```{r}
+plot_glht <- function(glht_confint_tidy, unit = NA, hide_y_title = FALSE, adjustment_method = NA, reference_value = 0, delta_text = c("difference in", "ratio of"), replace_minus = NA) {
+  label_unit <- ""
+  adj_text <- "adjusted with the single-step method"
+  
+  if(!missing(unit))
+    label_unit <- sprintf("in %s ", unit)
+  
+  if(!missing(adjustment_method))
+    adj_text <- adjustment_method
+  
+  y_label <- sprintf("Estimate of the %s %s \n with 95%% CI (%s)", delta_text[1], label_unit, adj_text)
+  
+  
+  if(!missing(replace_minus))
+    glht_confint_tidy <- 
+    glht_confint_tidy %>% 
+    mutate(contrast = str_replace(contrast, "-", replace_minus))
+  
+  glht_confint_tidy %>% 
+    ggplot(aes(x = contrast, y = estimate, ymin = conf.low, ymax = conf.high)) +
+    geom_hline(yintercept = reference_value, color = "red") +
+    geom_pointrange() +
+    expand_limits(y = reference_value) +
+    coord_flip() +
+    ylab(y_label)
 }
 
 ```
+
+
+```{r}
+# log-transformation
+m_data_log <- lm(log(wpm) ~ typing_style, data = data)
+
+
+
+# GLHT
+df_data_log_es <- 
+  m_data_log %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+    tidy(conf.int = TRUE) %>% 
+    mutate(
+      conf.low = exp(conf.low),
+      conf.high = exp(conf.high),
+      estimate = exp(estimate)) 
+
+df_data_log_es %>% 
+    plot_glht("WPM", adjustment_method = "Tukey HSD", reference_value = 1, delta_text = "ratio of", replace_minus = "/")
+
+
+```
+
+
 
