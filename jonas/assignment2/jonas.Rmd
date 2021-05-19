@@ -1,0 +1,173 @@
+---
+title: "QHCI - Assignment 2"
+author: "Jonas Brunner"
+date: "11.5.2021"
+output: html_document
+---
+
+# Research Question
+The research questions for your group are:
+
+	RQ1: "Do overall typing speed differ between touch-typist and non-touchtypist?"
+
+	RQ2: "How much does the result from RQ1 influenced by whether the participants type known-words or random string?"
+	
+
+### Setup
+```{r, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(lme4)
+import::from(car, leveneTest, sigmaHat)
+import::from(modelr, add_residuals, add_predictions)
+import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
+import::from(ARTool, art, artlm, art.con)                  
+
+```
+
+
+### Data wrangling
+Read all csv files in the /log directory and parse *user_id* and *condition* from the filename of the .csv
+In the end, join it together with the *participant_info.csv*
+
+```{r, message=FALSE}
+regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
+
+readLog <- function(fileName) {
+    csv_data <- read_csv(str_c('./log/',fileName)) %>% 
+      mutate(length = str_length(stimulus)) %>% 
+      group_by(stimulus_index) %>% 
+      summarise(wpm = (as.double(max(length)-1)/5)/ as.double(max(input_time_ms)) * 60000, length = max(length)) %>% 
+      mutate(user_id = as.numeric(str_replace(fileName, regex_parse, "\\1")), condition = str_replace(fileName, regex_parse, "\\3"))
+    return(csv_data)
+}
+
+participant_info <- read_csv('./participant_info.csv')
+log_files <- list.files('./log')
+data <- as_tibble_col(lapply(log_files, readLog), col='nested') %>% 
+        unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
+        mutate(typing_style = if_else(is_touchtypist, 'Non-touchtypist', 'Touchtypist')) %>% 
+        select(-is_touchtypist, -length)
+
+data_with_cond <- data %>% mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
+
+
+
+```
+
+# RQ 1
+## Inspect Data
+When plotting the data in a violin plot, we can not see a significant difference in WPM between 
+the different typing styles.
+```{r}
+ data %>% 
+  ggplot(aes(x = typing_style)) +
+  geom_violin(aes(y = wpm), color = NA, fill = "grey") +
+  geom_boxplot(aes(y=wpm), width=0.1) +
+  labs(x = "", y = "WPM", title = "WPM per typing style")
+```
+
+## Linear Model Fitting
+We fit a model with random-intercepts and random-slopes. Unfortunately, the qqplot shows that the data does not fulfill normality of errors.
+```{r}
+# m <- lmer(wpm ~ typing_style * condition + (1 | user_id), data = data_with_cond)
+
+
+#This is probably not right yet
+m_rep <- lmer(log(wpm) ~ condition * typing_style + (1 + condition | user_id), data = data_with_cond)
+
+summary(m_rep)
+
+anova(m_rep)
+
+shapiro.test(residuals(m_rep))
+
+data_with_cond %>% add_predictions(m_rep) %>% add_residuals(m_rep) %>% ggplot(aes(x=pred)) + geom_hline(yintercept = 0, color="red") + geom_point(aes(y=resid))
+
+data_with_cond %>% 
+  add_residuals(m_rep) %>%
+  ggplot(aes(sample = resid)) +
+  stat_qq_band() +
+  stat_qq_line() +
+  stat_qq_point(alpha = 0.3)
+
+
+
+```
+
+We try to log transform the model to fulfill normality => makes it even worse
+
+```{r}
+m_log <- lmer(log(wpm) ~ condition * typing_style + (1 + condition | user_id), data = data_with_cond)
+
+data_with_cond %>% 
+  add_residuals(m_log) %>%
+  ggplot(aes(sample = resid)) +
+  stat_qq_band() +
+  stat_qq_line() +
+  stat_qq_point(alpha = 0.3)
+
+
+```
+
+We use GLHT with the untransformed model, but no significant p value is reached.
+```{r}
+
+m_rep %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  tidy(conf.int = TRUE)
+
+m_rep %>% 
+  glht(mcp(typing_style = "Tukey")) %>% 
+  summary(test = adjusted("holm")) %>%
+  tidy()
+
+```
+
+
+
+# RQ2
+## Inspect Data
+Out of the three conditions, Sentences results in the highest WPM
+```{r}
+
+ data %>% 
+  ggplot(aes(x = condition)) +
+  geom_violin(aes(y = wpm), color = NA, fill = "grey") +
+  geom_boxplot(aes(y=wpm), width=0.1) +
+  labs(x = "", y = "WPM", title = "WPM per Condition")
+
+```
+
+
+## Fit linear models
+```{r}
+
+m_rep <- lmer(wpm ~ condition * typing_style + (1 + condition | user_id), data = data_with_cond)
+
+m_glht <- m_rep %>% 
+  glht(mcp(condition = c(
+    "(Random - Mix)/2 - Sentences = 0",
+     "Random - Mix = 0"
+  ))) %>% 
+  summary(test = adjusted("holm"))
+
+m_glht %>% confint() %>%  tidy()
+m_glht %>% tidy()
+
+shapiro.test(residuals(m_rep))
+
+leveneTest(residuals(m_rep) ~ data$typing_style, center = "median")
+
+#m_rep %>%
+#  tidy(conf.int = TRUE) %>% 
+#  select(term, estimate, conf.low, conf.high) %>% 
+#  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+#  geom_pointrange() +
+#  geom_hline(yintercept = 0, color = "blue") +
+#  coord_flip()
+
+
+```
+
+
