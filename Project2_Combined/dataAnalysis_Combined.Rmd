@@ -580,9 +580,10 @@ stat_qq_point(alpha = 0.5) +
 labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
 ```
 
-Next we run a Shapiro test. We find that the p-value is extremely small and therefore the normality assumption is highly likely to be violated.
+Next we run a Shapiro test and a Levene test. We find that for the Shapiro test the p-value is extremely small and therefore the normality assumption is highly likely to be violated. For the Levene test we find that we do not reject the homoscedasticity assumption.
 ```{r, echo=T, warning=FALSE}
 shapiro.test(residuals(model))
+leveneTest(residuals(model) ~ data$typing_style, center = "median")
 ```
 
 ### Model Transformation ###
@@ -594,6 +595,7 @@ model_log <- lmer(log(wpm) ~ (typing_style*condition)/stimulus_index+(1|user_id)
 
 ### Re-Testing Statistical Assumptions ###
 
+We re-run the Shapiro test and find that linearity assumptions are still not given.
 ```{r, echo=T, warning=FALSE}
 shapiro.test(residuals(model_log))
 ```
