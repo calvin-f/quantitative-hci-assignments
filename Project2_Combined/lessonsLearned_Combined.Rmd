@@ -1,0 +1,9 @@
+---
+title: ' QHCI 2021 - Project 2 - Combined Lessons Learned'
+author: 'Taylor & Tobias'
+date: "19.05.2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
