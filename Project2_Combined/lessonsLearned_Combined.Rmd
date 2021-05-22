@@ -51,7 +51,14 @@ We reviewed all these lessons learned and would form the following top three arg
 
 
 * Documentation
+  + The code snippets itself were missing comments
+  + The notebook was missing explanation to the code snippets and their results
+  + The explanations were not clear enough or not related to the code snippets
+  
 * Make good use of `*.rmd` capabilities.
-  * Inline code
-  * Auto imports/installation of required packages
-* 
+  + Inline R code
+  +
+  
+* Data Wrangling
+  +
+
