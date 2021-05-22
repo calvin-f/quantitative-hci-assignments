@@ -35,43 +35,24 @@ Within this part we will analyze the data set and try to answer the two research
 
 Before we can jump in the analysis we start with setting up the required dependencies for this R notebook.
 
+```{r, results='hide', message=FALSE, warning=FALSE}
+# define packages
+required_packages <- c("tidyverse", "readr", "ggplot2", "stringr")
+
+# install packages when they are not already included
+install.packages(setdiff(required_packages, rownames(installed.packages())))  
+```
+
+Then load the packages to finish the setup
+
 ```{r, results='hide', message=FALSE,  warning=FALSE}
 # load the packages
 library(tidyverse)
-library(lme4)
+library(readr)
 library(ggplot2)
-library(broom.mixed)
-library(lmerTest)  
-library(plyr)
-library(lsm)
-library(car)
 library(stringr)
-```
 
-Some of the required packages have to be installed extra.
 
-```{r, results='hide', message=FALSE, warning=FALSE}
-# define addtitional packages
-additional_packages <- c("multcomp", "PearsonDS", "ARTool", "qqplotr", "psych", "moments")
-
-# only install additional packages when they are not already included
-install.packages(setdiff(additional_packages, rownames(installed.packages())))  
-```
-To finish the setup we need to load the remaining packages fo finish the setup. 
-
-```{r, results='hide'}
-# load the remaining additional packages
-import::from(moments, skewness)
-import::from(MASS,mvrnorm)
-import::from(broom.mixed,tidy)
-import::from(multcomp, glht, mcp, adjusted) 
-import::from(PearsonDS, rpearson)                                   
-import::from(ARTool, art, artlm, art.con)                  
-import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
-import::from(psych, d.ci) 
-import::from(cowplot, plot_grid) 
-import::from(modelr, add_residuals, add_predictions)     
-import::from(car, leveneTest, sigmaHat)
 ```
 
 ***
@@ -141,7 +122,7 @@ Next we check the structure of the data object with `str(data)` and can see the 
 ```{r, echo=FALSE}
 str(data)
 ```
-Out data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
+Our data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
 
 
 
@@ -285,10 +266,6 @@ data %>%
  hist(main=sprintf("Distribution of wpms for the %s typing_style", colnames(min_wpm_by_typing_style[2])), xlab="Words per minute (wpms)", xlim=c(rounded_min, rounded_max), breaks=nr_of_bins, col="grey")
 ```
 
-```{r}
-# r function for skewness
-by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
-```
 
 
 
@@ -362,7 +339,7 @@ The `median`, `min`, `max`, as well as the `IQR` this time show significant diff
 
 
 * Condition `r colnames(max_wpm_by_condition[1])`:
-  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r `median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
   + But these users had a very small spread which is by the  `IQR of` (`r iqr_wpm_by_condition[[1]]`) that is lower than the others.
 
 * Condition `r colnames(max_wpm_by_condition[2])`:
