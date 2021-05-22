@@ -7,3 +7,40 @@ output:
     df_print: paged
   pdf_document: default
 ---
+
+## Lessons Learned
+
+### Raw Data
+
+* One lesson learned is definitely to add more explanation/text to all code. It is important to clearly explain every step undertaken and to add notes to each step and result. 
+* Furthermore, testing assumptions is an important part of the analysis. 
+
+***
+
+* Just include charts that bring value to the workbook. 
+* Document what and why you are doing some calculations and visualizations
+
+*** 
+
+* The setup of additional packages is well handled and brings good reproducibility
+```
+# define additional packages
+additional_packages <- c("multcomp", "PearsonDS", "ARTool", "qqplotr", "psych", "moments")
+
+# only install additional packages when they are not already included
+install.packages(setdiff(additional_packages, rownames(installed.packages())))  
+```
+
+* The notebook makes good use of the R markdown features with marking text as code or using inline R code
+
+* First of, we define a helper function `read_log_files` that will help read in all the different log files.
+
+* Our data set contains `ncol(data)` columns (*`colnames(data)`*) and `r nrow(data)` rows for `n_distinct(data$user_id)` different users.
+
+### Top three
+
+* Documentation
+* Make good use of `*.rmd` capabilities.
+  * Inline code
+  * Auto imports/installation of required packages
+* 
