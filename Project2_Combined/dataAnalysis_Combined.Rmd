@@ -83,7 +83,7 @@ First of, we define a helper function `read_log_files` that will help read in al
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
-regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
+regex_parse <- "User([\\d]*)_[^_]*_([^\\.]*)\\.csv"
 
 # helper function to read in log files
 readLog <- function(fileName) {
@@ -133,7 +133,7 @@ for (file in log_files) {
   data <- data %>% add_row(readLog(file))
 }
 # ? TODO add comment
-
+data    <- data    %>% mutate(typing_style = factor(typing_style, levels = c("Touchtypist", "Non-touchtypist")))
 
 
 ```
