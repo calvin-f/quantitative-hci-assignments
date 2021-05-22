@@ -86,13 +86,22 @@ First of, we define a helper function `read_log_files` that will help read in al
 regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
 
 # helper function to read in log files
-read_log_files <- function(fileName){
-  csv_data <- read_csv(str_c('./log/',fileName)) %>% 
-      mutate(length = str_length(stimulus)) %>% 
-      group_by(stimulus_index) %>% 
-      summarise(wpm = (as.double(max(length)-1)/5)/ as.double(max(input_time_ms)) * 60000, length = max(length)) %>% 
-      mutate(user_id = as.numeric(str_replace(fileName, regex_parse, "\\1")), condition = str_replace(fileName, regex_parse, "\\3"))
-    return(csv_data)
+readLog <- function(fileName) {
+  csv_data <- read_csv(str_c('./log/', fileName))
+  userId <- as.double(str_replace(fileName, regex_parse, "\\1"))
+  logData <-
+    csv_data %>%
+    mutate(
+      length = str_length(csv_data$stimulus),
+      user_id = userId,
+      condition = str_replace(fileName, regex_parse, "\\2"),
+      typing_style = if_else(isTouchTypist(userId), "Non-touchtypist", "Touchtypist")
+    ) %>%
+    group_by(stimulus_index) %>%
+    filter(input_time_ms == max(input_time_ms)) %>%
+    mutate(wpm = ((length - 1) / 5) / input_time_ms * 60000) %>%
+    select(c(stimulus_index, wpm, user_id, condition, typing_style))
+  return(logData)
 }
 ```
 
@@ -105,21 +114,28 @@ log_files <- list.files('./log')
 # file that includes the participant information
 participant_info <- read_csv("participant_info.csv")
 
+isTouchTypist <- function(userId) {
+  s <- participant_info %>% filter(user_id == userId) %>% slice(1)
+  return(s$is_touchtypist)
+}
+
 # backup file that is already processed
-combined_log_background <- read_csv(("combined_log_background.csv"))
+# combined_log_background <- read_csv(("combined_log_background.csv"))
 ```
 
 Now we are ready to process the log files and create the data we need.
 
 ```{r, results='hide', message=FALSE,}
 # data wrangling
-data <- as_tibble_col(lapply(log_files, read_log_files), col='nested') %>% 
-        unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
-        mutate(typing_style = if_else(is_touchtypist, 'Non-touchtypist', 'Touchtypist')) %>% 
-        select(-is_touchtypist, -length)
+data <- tribble(~ user_id,  ~ wpm, ~ condition, ~ typing_style, ~ stimulus_index)
 
+for (file in log_files) {
+  data <- data %>% add_row(readLog(file))
+}
 # ? TODO add comment
-data_with_cond <- data %>% mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
+
+
+
 ```
 
 > Note that the *IV stimulus type* is now referred to as *condition* in our data set with the same three levels (*Sentences, Random, Mix*).
