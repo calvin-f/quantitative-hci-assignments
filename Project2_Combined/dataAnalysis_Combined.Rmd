@@ -8,25 +8,34 @@ output:
   pdf_document: default
 ---
 
-# Research Questions
-
-The research questions for our group are:
+This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)*.
+We used the data set the authors have provided within the course of their study.
+The aim of the data analysis will be to answer the following to research questions (*RQ*):
 
 *	*RQ1: Do overall typing speed differ between touch-typist and non-touchtypist?*
 
 * *RQ2: How much does the result from RQ1 influenced by whether the participants type known-words or random string?*
 	
+The analysis will base on the **within-subject design** of the study including **one independent variable *(IV)* ** that has **three levels**.
+The **IV  *stimulus tpye* ** refers to the type of string users had to type in for the transcription and has three levels:
 
-# Paper Review
+* *sentences*: easy regular sentences
+* *random*: random sequences of letters
+* *mix*: a mix of the two other conditions
+
+For the experiments they used a **randomized order** for the three *stimulus types*.
+
 
 
 # Data Analysis 
 
+Within this part we will analyze the data set and try to answer the two research questions.
+
 ## Setup 
 
-We start with setting up the required dependencies.
+Before we can jump in the analysis we start with setting up the required dependencies for this R notebook.
 
-```{r, results='hide', message=FALSE,  warning=FALSE, echo=FALSE}
+```{r, results='hide', message=FALSE,  warning=FALSE}
 # load the packages
 library(tidyverse)
 library(lme4)
@@ -37,21 +46,20 @@ library(plyr)
 library(lsm)
 library(car)
 library(stringr)
-
 ```
 
-Some of the packages have to be installed extra.
+Some of the required packages have to be installed extra.
 
-```{r, results='hide', message=FALSE, warning=FALSE, echo=FALSE}
+```{r, results='hide', message=FALSE, warning=FALSE}
 # define addtitional packages
 additional_packages <- c("multcomp", "PearsonDS", "ARTool", "qqplotr", "psych", "moments")
 
 # only install additional packages when they are not already included
 install.packages(setdiff(additional_packages, rownames(installed.packages())))  
 ```
-Then load the remaining packages fo finish the setup. Next we head in to the data processing.
+To finish the setup we need to load the remaining packages fo finish the setup. 
 
-```{r, results='hide', echo=FALSE}
+```{r, results='hide'}
 # load the remaining additional packages
 import::from(moments, skewness)
 import::from(MASS,mvrnorm)
@@ -66,16 +74,16 @@ import::from(modelr, add_residuals, add_predictions)
 import::from(car, leveneTest, sigmaHat)
 ```
 
+***
 
 ## Data Processing ##
 
-To start we define a helper function `read_log_files` that will help read in all the different log files.
+Next we can start with the data processing.
+First of, we define a helper function `read_log_files` that will help read in all the different log files.
 
 ```{r, message=FALSE}
-
 # Regular expression to help parse the log files
 regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
-
 
 # helper function to read in log files
 read_log_files <- function(fileName){
@@ -88,13 +96,16 @@ read_log_files <- function(fileName){
 }
 ```
 
-Thereafter, we list all the existing log files (`log_files`) and and the csv containing the participant information (`participant_info`).
+Thereafter, we define all the existing log files (`log_files`) and and the csv containing the participant information (`participant_info`).
 
 ```{r, results='hide', message=FALSE, }
+# list of all log files
 log_files <- list.files('./log')
 
+# file that includes the participant information
 participant_info <- read_csv("participant_info.csv")
 
+# backup file that is already processed
 combined_log_background <- read_csv(("combined_log_background.csv"))
 ```
 
@@ -107,11 +118,14 @@ data <- as_tibble_col(lapply(log_files, read_log_files), col='nested') %>%
         mutate(typing_style = if_else(is_touchtypist, 'Non-touchtypist', 'Touchtypist')) %>% 
         select(-is_touchtypist, -length)
 
-# ?
+# ? TODO add comment
 data_with_cond <- data %>% mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
-
 ```
 
+> Note that the *IV stimulus type* is now referred to as *condition* in our data set with the same three levels (*Sentences, Random, Mix*).
+> The *typing style* will still be referred to as *typing style*.
+
+***
 
 ## Data Exploration and Description
 
@@ -127,7 +141,7 @@ Next we check the structure of the data object with `str(data)` and can see the 
 ```{r, echo=FALSE}
 str(data)
 ```
-
+Out data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
 
 
 
@@ -139,17 +153,13 @@ To get a broad overview of the data we use the  `summary` function.
 ```{r, echo=FALSE}
 summary(data)
 ```
-The data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows.
-Out of this summary we get a non-parametrized statistical description for the first three columns *`r colnames(data[0:3])`* that contain numerical data. For the remaining two rows including strings we get again the length of the columns.
+Out of this summary we get several statistical measures for the first three columns *`r colnames(data[0:3])`* that contain numerical data. For the remaining two rows *`r colnames(data[3:4])`* including strings we get again the length of the columns.
+
+In order to answer the research questions we will now have a look at the *words per minute (wpm)* first with regards to the *typing style* (RQ1) and then in connection with the different *conditions* (RQ2).
+To support this process we will also create suitable visualizations for the data sets.
 
 
-#### Visualizations 
-
-
-To illustrate this summary better we create a few visualizations of the results for the three numerical columns.
-
-
-##### **RQ1: Words per minute (wpm) by typing styles**
+#### **RQ1 - words per minute (wpm) by typing styles**
 
 First we create a violin plot that includes boxplots for *words per minute (wpm)* by the *typing styles* of users.
 
@@ -280,9 +290,15 @@ data %>%
 by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
 ```
 
-***
 
-##### **RQ2: Words per minute (wpm) by conditions**
+
+
+
+
+
+
+
+#### **RQ2 - words per minute (wpm) by condition (stimulus type)**
 
 With RQ2 in mind we create the same plot again for *words per minute (wpm)* by the different *conditions*.
 
@@ -354,7 +370,7 @@ The `median`, `min`, `max`, as well as the `IQR` this time show significant diff
   + They had larger spread indicated by the `IQR of`(`r iqr_wpm_by_condition[[3]]`) but not the largest compared to the others .
 
 * Condition `r colnames(max_wpm_by_condition[3])`:
-  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[3])` were the fastest, which is shown in the highest `median` (`r `median_wpm_by_condition[[3]]`), `min`(`r min_wpm_by_condition[[3]]`) and `max` (`r max_wpm_by_condition[[3]]`) values compared to the other conditions. 
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[3])` were the fastest, which is shown in the highest `median`  (`r median_wpm_by_condition[[3]]`), `min`(`r min_wpm_by_condition[[3]]`) and `max` (`r max_wpm_by_condition[[3]]`) values compared to the other conditions. 
   + Also they had the largest spread indicated by the `IQR of`(`r iqr_wpm_by_condition[[3]]`) that is higher than the others. 
   
 At this point we can already say that there are obvious differences between the *conditions*.
@@ -403,7 +419,7 @@ Looking at the concrete numbers for both the `mean` and the `median` for *condti
   + The same applies for `r colnames(mean_wpm_by_condition[2])` with a `mean` of `r mean_wpm_by_condition[[2]]` *wpms* and a `median` of `r median_wpm_by_condition[[2]]` *wpms*.
 
 * Condition `r colnames(max_wpm_by_condition[3])`:
-  + For `r colnames(mean_wpm_by_condition[3])` tghe `mean` is `r mean_wpm_by_condition[[3]]` *wpms* and the `median` is  `r median_wpm_by_condition[[3]]` *wpms*.
+  + For `r colnames(mean_wpm_by_condition[3])` the `mean` is `r mean_wpm_by_condition[[3]]` *wpms* and the `median` is  `r median_wpm_by_condition[[3]]` *wpms*.
 
 Out of this numbers we see that the differences for `r colnames(max_wpm_by_condition[1])` and `r colnames(max_wpm_by_condition[2])` are very marginal and do not really imply a skewness as can be seen on the visualizations. Thus, we can say that both distributions are very very close to a normal distribution.
 For the `r colnames(max_wpm_by_condition[2])` *condition* the spread is also very small, which says that most people are constantly slow when typing in `r colnames(max_wpm_by_condition[2])` strings. For the `r colnames(max_wpm_by_condition[1])` *condition* the spread is already bigger, where some people show to get along better with typing in `r colnames(max_wpm_by_condition[1])` strings.
@@ -457,7 +473,8 @@ TODO: include inferential statistics here already?
 
 ***
 
-## Data Variation ##
+
+## Data Variation & Validity ##
 
 ### Linear Model ###
 
@@ -473,7 +490,6 @@ test columns using inferential statistics
 
 
 ## Results ##
-
 
 
 
