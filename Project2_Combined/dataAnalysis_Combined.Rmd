@@ -44,7 +44,7 @@ Before we can jump into the analysis we start by installing the required package
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
 # define packages
-packages <- c("tidyverse","lme4","multcomp","broom.mixed","lmerTest","ggplot2","plyr","lsm","lsmeans","car","stringr","PearsonDS", "ARTool", "qqplotr", "psych", "moments")
+packages <- c("tidyverse","lme4","multcomp","broom.mixed","lmerTest","ggplot2","plyr","lsm","lsmeans","car","stringr","qqplotr", "moments")
 
 # install packages when they are not already included
 install.packages(setdiff(packages, rownames(installed.packages())))  
@@ -67,13 +67,9 @@ import::from(moments, skewness)
 import::from(MASS,mvrnorm)
 import::from(broom.mixed,tidy)
 import::from(multcomp, glht, mcp, adjusted) 
-import::from(PearsonDS, rpearson)                                   
-import::from(ARTool, art, artlm, art.con)                  
 import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
-import::from(psych, d.ci) 
-import::from(cowplot, plot_grid) 
 import::from(modelr, add_residuals, add_predictions)     
-import::from(car, leveneTest, sigmaHat)
+import::from(car, leveneTest)
 import::from(plyr, ddply)
 ```
 
@@ -597,6 +593,7 @@ model_log %>%
     conf.high = exp(conf.high),
     estimate = exp(estimate)) 
 ```
+
 
 ***
 
