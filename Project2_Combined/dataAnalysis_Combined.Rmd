@@ -59,7 +59,6 @@ library(lme4)
 library(ggplot2)
 library(broom.mixed)
 library(lmerTest)  
-library(plyr)
 library(lsm)
 library(lsmeans)
 library(car)
@@ -75,6 +74,7 @@ import::from(psych, d.ci)
 import::from(cowplot, plot_grid) 
 import::from(modelr, add_residuals, add_predictions)     
 import::from(car, leveneTest, sigmaHat)
+import::from(plyr, ddply)
 ```
 
 ***
