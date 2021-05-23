@@ -78,7 +78,7 @@ import::from(plyr, ddply)
 ## Data Processing ##
 
 Next we can start with the data processing.
-First off, we define a helper function `read_log_files` that will help read in all the different log files.
+First off, we define a helper function `readLog` which takes a file path and parses the filename and data of the file.
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
