@@ -1,30 +1,9 @@
 ---
-title: ' QHCI 2021 - Project 2'
-author: ' Tobias Boner (17-707-878)'
-date: "10.05.2021"
-output:
-  html_document:
-    df_print: paged
-  pdf_document: default
+title: "Project2_McCants"
+author: "Taylor McCants"
+date: "5/22/2021"
+output: html_document
 ---
-
-This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)*.
-We used the data set the authors have provided within the course of their study.
-The aim of the data analysis will be to answer the following to research questions (*RQ*):
-
-*	*RQ1: Do overall typing speed differ between touch-typist and non-touchtypist?*
-
-* *RQ2: How much does the result from RQ1 influenced by whether the participants type known-words or random string?*
-	
-The analysis will base on the **within-subject design** of the study including **one independent variable *(IV)* ** that has **three levels**.
-The **IV  *stimulus tpye* ** refers to the type of string users had to type in for the transcription and has three levels:
-
-* *sentences*: easy regular sentences
-* *random*: random sequences of letters
-* *mix*: a mix of the two other conditions
-
-For the experiments they used a **randomized order** for the three *stimulus types*.
-
 
 
 # Data Analysis 
@@ -33,34 +12,37 @@ Within this part we will analyze the data set and try to answer the two research
 
 ## Setup 
 
-Before we can jump in the analysis we start with setting up the required dependencies for this R notebook.
-
-```{r, results='hide', message=FALSE, warning=FALSE}
-# define packages
-required_packages <- c("tidyverse", "readr", "ggplot2", "stringr")
-
-# install packages when they are not already included
-install.packages(setdiff(required_packages, rownames(installed.packages())))  
-```
-
-Then load the packages to finish the setup
-
 ```{r, results='hide', message=FALSE,  warning=FALSE}
 # load the packages
 library(tidyverse)
-library(readr)
+library(lme4)
 library(ggplot2)
+library(broom.mixed)
+library(lmerTest)  
+library(plyr)
+library(lsm)
+library(car)
 library(stringr)
-
-
+additional_packages <- c("multcomp", "PearsonDS", "ARTool", "qqplotr", "psych", "moments")
+install.packages(setdiff(additional_packages, rownames(installed.packages())))  
+import::from(moments, skewness)
+import::from(MASS,mvrnorm)
+import::from(broom.mixed,tidy)
+import::from(multcomp, glht, mcp, adjusted) 
+import::from(PearsonDS, rpearson)                                   
+import::from(ARTool, art, artlm, art.con)                  
+import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
+import::from(psych, d.ci) 
+import::from(cowplot, plot_grid) 
+import::from(modelr, add_residuals, add_predictions)     
+import::from(car, leveneTest, sigmaHat)
 ```
 
 ***
 
 ## Data Processing ##
 
-Next we can start with the data processing.
-First of, we define a helper function `read_log_files` that will help read in all the different log files.
+Firstly, we create a function to read in the data files.
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
@@ -122,7 +104,7 @@ Next we check the structure of the data object with `str(data)` and can see the 
 ```{r, echo=FALSE}
 str(data)
 ```
-Our data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
+Out data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
 
 
 
@@ -266,6 +248,10 @@ data %>%
  hist(main=sprintf("Distribution of wpms for the %s typing_style", colnames(min_wpm_by_typing_style[2])), xlab="Words per minute (wpms)", xlim=c(rounded_min, rounded_max), breaks=nr_of_bins, col="grey")
 ```
 
+```{r}
+# r function for skewness
+by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
+```
 
 
 
@@ -339,7 +325,7 @@ The `median`, `min`, `max`, as well as the `IQR` this time show significant diff
 
 
 * Condition `r colnames(max_wpm_by_condition[1])`:
-  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r `median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
   + But these users had a very small spread which is by the  `IQR of` (`r iqr_wpm_by_condition[[1]]`) that is lower than the others.
 
 * Condition `r colnames(max_wpm_by_condition[2])`:
@@ -467,12 +453,3 @@ test columns using inferential statistics
 
 
 ## Results ##
-
-
-
-
-
-
-
-
-
