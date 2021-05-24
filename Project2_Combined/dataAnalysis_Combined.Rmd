@@ -370,16 +370,15 @@ From the visualization we already see that the mean (*marked as red dots*) and t
 After looking at *condition* on its own, we turn to the interaction of *typing style* and *condition*. We create the violin plot for *wpm* by the different *typing styles* and *conditions*. We find that even across *conditions* there do not seem to be significant differences between non-touchtypists and touchtypists in *wpm*. These findings all seem to support the Feit (2006) paper.
 
 ```{r, echo=FALSE, warning=FALSE}
-ggplot(data, aes(x=typing_style, y=wpm,fill=condition)) + 
-  geom_violin(addMean=TRUE,  meanPointColor="black") + 
+  ggplot(data, aes(x=typing_style, y=wpm,fill=condition)) + 
+  geom_violin() + 
   geom_boxplot(aes(fill=condition), width = 0.15,position=position_dodge(0.9)) +
-   # add mean to compare to median
-  stat_summary(fun=mean, geom="point",aes(shape="mean"), , size=5, color="red", fill="red") +
+  guides(fill=guide_legend(title="Condition",override.aes = list(shape = NA))) +
+  stat_summary(fun=mean, geom="point",aes(shape="mean"), size=5, color="red",position=position_dodge(0.9)) +
   scale_shape_manual("", values=c("mean"="x")) +
   scale_fill_brewer(palette="Blues") + 
   theme_classic() +
-  labs(title="Plot of Words Per Minute (WPM) by Typing Style and Condition",x="Typing Style", y = "Words Per Minute (WPM)") +
-  guides(fill=guide_legend(title="Condition"))
+  labs(title="Plot of Words Per Minute (WPM) by Typing Style and Condition",x="Typing Style", y = "Words Per Minute (WPM)") 
 ```
 
 
