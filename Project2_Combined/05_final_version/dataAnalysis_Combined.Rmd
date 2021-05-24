@@ -10,9 +10,9 @@ output:
 
 # Introduction
 
-This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)* by Anna Maria Feit, Daryl Weir, and Antti Oulasvirta (2006).
+This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)* by Anna Maria Feit, Daryl Weir, and Antti Oulasvirta (2016).
 We used the data set the authors have provided within the course of their study.
-The aim of the data analysis will be to answer the following to two research questions (RQ):
+We will analyze the data with the aim of answering the following two research questions (RQ):
 
 *	*RQ1: Do overall typing speed differ between touch-typist and non-touchtypist?*
 
@@ -521,13 +521,17 @@ summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
 ```
 
 
+
+
 ***
 
 
 # Conclusion
 
-After exploring and analyzing our data, we have not seen a significant effect on word per minute for different *typing styles* (RQ1). 
-Moreover, after looking at *condition* * *typing style*, a significant difference could not be found, which was confirmed by the model (RQ2). Still, it has to be noted that the *condition* itself shows a significant effect on the resulting *wpm.* Both findings (RQ1, RQ2) were not suprising after looking at the descriptive statistics and visualizations.
+After exploring and analyzing our data, we have not seen a significant effect on words per minute for different *typing styles* (RQ1). 
+Also, after looking at *condition* * *typing style*, a significant difference could not be found (RQ2). This was confirmed by our model as well. Still, it has to be noted that the *condition* itself showed a significant effect on the resulting *wpm.*
+Moreover, the findings (RQ1 and RQ2) were not surprising after having looked at the descriptive statistics and visualizations.
+All in all, our data analysis supported the findings of the paper of Feit et al. (2016).
 
 
 

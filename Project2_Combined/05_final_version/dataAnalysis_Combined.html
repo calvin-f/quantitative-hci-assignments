@@ -175,7 +175,7 @@ pre code {
 
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>This project is based on the paper <em><a href="https://dl.acm.org/doi/10.1145/2858036.2858233">How We Type: Movement Strategies and Performance in Everyday Typing</a></em> by Anna Maria Feit, Daryl Weir, and Antti Oulasvirta (2006). We used the data set the authors have provided within the course of their study. The aim of the data analysis will be to answer the following to two research questions (RQ):</p>
+<p>This project is based on the paper <em><a href="https://dl.acm.org/doi/10.1145/2858036.2858233">How We Type: Movement Strategies and Performance in Everyday Typing</a></em> by Anna Maria Feit, Daryl Weir, and Antti Oulasvirta (2016). We used the data set the authors have provided within the course of their study. We will analyze the data with the aim of answering the following two research questions (RQ):</p>
 <ul>
 <li><p><em>RQ1: Do overall typing speed differ between touch-typist and non-touchtypist?</em></p></li>
 <li><p><em>RQ2: How much does the result from RQ1 influenced by whether the participants type known-words or random string?</em></p></li>
@@ -635,7 +635,7 @@ anova(model,type=3,test.statistic=&quot;F&quot;)</code></pre>
 ##                                                             t value Pr(&gt;|t|)
 ## (Non-touchtypist Sentences) - Touchtypist Sentences == 0     -0.488  0.99481
 ## (Non-touchtypist Sentences) - (Non-touchtypist Mix) == 0     28.764  &lt; 0.001
-## (Non-touchtypist Sentences) - Touchtypist Mix == 0            3.618  0.00232
+## (Non-touchtypist Sentences) - Touchtypist Mix == 0            3.618  0.00228
 ## (Non-touchtypist Sentences) - (Non-touchtypist Random) == 0  45.289  &lt; 0.001
 ## (Non-touchtypist Sentences) - Touchtypist Random == 0         6.533  &lt; 0.001
 ## Touchtypist Sentences - (Non-touchtypist Mix) == 0            4.705  &lt; 0.001
@@ -644,8 +644,8 @@ anova(model,type=3,test.statistic=&quot;F&quot;)</code></pre>
 ## Touchtypist Sentences - Touchtypist Random == 0              44.811  &lt; 0.001
 ## (Non-touchtypist Mix) - Touchtypist Mix == 0                 -0.599  0.98673
 ## (Non-touchtypist Mix) - (Non-touchtypist Random) == 0        16.534  &lt; 0.001
-## (Non-touchtypist Mix) - Touchtypist Random == 0               2.316  0.13250
-## Touchtypist Mix - (Non-touchtypist Random) == 0               3.023  0.01843
+## (Non-touchtypist Mix) - Touchtypist Random == 0               2.316  0.13252
+## Touchtypist Mix - (Non-touchtypist Random) == 0               3.023  0.01838
 ## Touchtypist Mix - Touchtypist Random == 0                    18.588  &lt; 0.001
 ## (Non-touchtypist Random) - Touchtypist Random == 0           -0.109  1.00000
 ##                                                                
@@ -672,7 +672,7 @@ anova(model,type=3,test.statistic=&quot;F&quot;)</code></pre>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
-<p>After exploring and analyzing our data, we have not seen a significant effect on word per minute for different <em>typing styles</em> (RQ1). Moreover, after looking at <em>condition</em> * <em>typing style</em>, a significant difference could not be found, which was confirmed by the model (RQ2). Still, it has to be noted that the <em>condition</em> itself shows a significant effect on the resulting <em>wpm.</em> Both findings (RQ1, RQ2) were not suprising after looking at the descriptive statistics and visualizations.</p>
+<p>After exploring and analyzing our data, we have not seen a significant effect on words per minute for different <em>typing styles</em> (RQ1). Also, after looking at <em>condition</em> * <em>typing style</em>, a significant difference could not be found (RQ2). This was confirmed by our model as well. Still, it has to be noted that the <em>condition</em> itself showed a significant effect on the resulting <em>wpm.</em> Moreover, the findings (RQ1 and RQ2) were not surprising after having looked at the descriptive statistics and visualizations. All in all, our data analysis supported the findings of the paper of Feit et al. (2016).</p>
 </div>
 
 
