@@ -9,9 +9,10 @@ output:
 ---
 
 # Introduction
-This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)*.
+
+This project is based on the paper *[How We Type: Movement Strategies and Performance in Everyday Typing](https://dl.acm.org/doi/10.1145/2858036.2858233)* by Anna Maria Feit, Daryl Weir, and Antti Oulasvirta (2006).
 We used the data set the authors have provided within the course of their study.
-The aim of the data analysis will be to answer the following to research questions (*RQ*):
+The aim of the data analysis will be to answer the following to two research questions (RQ):
 
 *	*RQ1: Do overall typing speed differ between touch-typist and non-touchtypist?*
 
@@ -26,11 +27,11 @@ The **IV  *stimulus tpye* ** refers to the type of string users had to type in f
 
 For the experiments they used a **randomized order** for the three *stimulus types*.
 
-### Theoretical Background 
+### Theoretical Background
 
-The Feit (2006) paper compares typing of self-taught typists (or everyday typists or non-touch typists) to touch typists (those that took a typing course and are trained on ten-finger touch typing system). It does not seem to be the case that everyday typists are inferior in their typing skills/performance.
+Feit et al. compare typing of self-taught typists (or everyday typists or non-touch typists) to touch typists (people who took a typing course and are trained on the ten-finger touch typing system). It does not seem to be the case that everyday typists are inferior in their typing skills/performance.
 
-They conducted three types of tasks: easy sentences of commonly used words (sentences), random letter strings (random) and a mix of those two (mix). Thirty typists participated. They captured key press data (keyboard logging), motion capture data (the position of each finger at and between keystrokes) and eye tracking/attention data (with eye-tracking glasses). The experiment followed a within-subject design.
+For their experiment, they conducted three types of tasks: transcribing easy sentences of commonly used words (sentences), random letter strings (random) and a mix of those two (mix). 30 typists participated. They captured key press data (keyboard logging), motion capture data (the position of each finger at and between keystrokes) and eye tracking/attention data (with eye-tracking glasses). As mentioned before, the experiment followed a within-subject design.
 
 The paper does not find a significant difference in words-per-minute (*wpm*) performance between touch typists (57.8 *wpm*) and non-touch typists (58.93 *wpm*). Touch typists and non-touch typists seem to have comparable speed. When typing random letter sequences the paper finds that entry rate dropped on average by around 50% compared to the sentences condition. The change was similar across both groups, with no significant difference between their performances in the random condition.
 
@@ -79,13 +80,13 @@ import::from(plyr, ddply)
 ## Data Processing ##
 
 Next we can start with the data processing.
-First off, we define a helper function `readLog` which takes a file path and parses the filename and data of the file.
+First off, we define a helper function `read_log` which takes a file path and parses the filename and data of the file.
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
 regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
 # helper function to read in log files
-readLog <- function(fileName) {
+read_log <- function(fileName) {
     csv_data <- read_csv(str_c('./log/',fileName)) %>% 
       mutate(length = str_length(stimulus)) %>% 
       group_by(stimulus_index) %>% 
@@ -108,7 +109,7 @@ Now we are ready to process the log files and create the data we need.
 
 ```{r, results='hide', message=FALSE,}
 # map over all files in the log folder and parse the data
-data <- as_tibble_col(lapply(log_files, readLog), col='nested') %>% 
+data <- as_tibble_col(lapply(log_files, read_log), col='nested') %>% 
         unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
         mutate(typing_style = if_else(is_touchtypist, 'Touchtypist', 'Non-touchtypist')) %>% 
         select(-is_touchtypist, -length) %>% 
@@ -173,7 +174,7 @@ data %>%
 
 Out of this first visualization, we can already imply that there is no big difference between the two *typing styles* with regards to *wpm*. This is also shown in the numbers below.
 
-**Non-Parametric Statisctics**
+**Non-Parametric Statistics**
 
 ```{r, echo=FALSE}
 # median of wpm per typing style
@@ -271,22 +272,22 @@ In contrast to the visualization before, in this case we immediately see that th
 **Non-Parametric Statistics**
 
 ```{r, echo=FALSE}
-# median of wpm per typing style
+# median of wpm per condition
 median_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = median) %>%
   rbind() %>%
   as_tibble()
 
-# min of wpm per typing style
+# min of wpm per condition
 min_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = min) %>%
   rbind() %>%
   as_tibble()
 
-# max of wpm per typing style
+# max of wpm per condition
 max_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = max) %>%
   rbind() %>%
   as_tibble()
 
-# IQR of wpm per typing style
+# IQR of wpm per condition
 iqr_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = IQR) %>%
   rbind() %>%
   as_tibble()
@@ -326,21 +327,20 @@ At this point we can already say that there are obvious differences between the 
 **Parametric Statistics**
 
 ```{r, echo=FALSE}
-# mean of wpm per typing style
+# mean of wpm per condition
 mean_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = mean) %>%
   rbind() %>%
   as_tibble()
 
-# variation of wpm per typing style
+# variation of wpm per condition
 var_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = var) %>%
   rbind() %>%
   as_tibble()
 
-# standard deviation of wpm per typing style
+# standard deviation of wpm per condition
 sd_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = sd) %>%
   rbind() %>%
   as_tibble()
-
 ```
 
 
@@ -370,6 +370,7 @@ From the visualization we already see that the mean (*marked as red dots*) and t
 After looking at *condition* on its own, we turn to the interaction of *typing style* and *condition*. We create the violin plot for *wpm* by the different *typing styles* and *conditions*. We find that even across *conditions* there do not seem to be significant differences between non-touchtypists and touchtypists in *wpm*. These findings all seem to support the Feit (2006) paper.
 
 ```{r, echo=FALSE, warning=FALSE}
+# violin plot including boxplots displaying words per minute (wpm) for typing styles * conditions
   ggplot(data, aes(x=typing_style, y=wpm,fill=condition)) + 
   geom_violin() + 
   geom_boxplot(aes(fill=condition), width = 0.15,position=position_dodge(0.9)) +
@@ -385,6 +386,7 @@ After looking at *condition* on its own, we turn to the interaction of *typing s
 Again, let's have a look at the numbers:
 
 ```{r, echo=FALSE, warning=FALSE}
+# summarize data according to typing style * condition
 ddply(data, ~ typing_style*condition,function(data) summary(data$wpm))
 ```
 
@@ -393,6 +395,7 @@ For the `mean` *wpm* by *typing style* and *condition*, we see, as in the plots 
 Finally, we can create a line plot. The line plot confirms the observation that there is very little difference between touchtypists and non-touchtypists across *conditions*.
 
 ```{r, echo=FALSE}
+# create line plot for typing style * condition
 with(data,interaction.plot(condition,typing_style,wpm,ylim=c(0,max(data$wpm))))
 ```
 
@@ -471,10 +474,15 @@ stat_qq_point(alpha = 0.5) +
 labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
 ```
 
+
+
+***
+
 ## Interpretation of the Results
+
 What we find in the model, is that the effect on *typing style* is not significant and neither is the effect on the interaction term *typing style* * *condition*. The *condition* itself however does show a significant effect. 
 
-> Mixed models have much larger degrees of freedom.
+> Note that mixed models have much larger degrees of freedom.
 
 ```{r, echo=T, warning=FALSE}
 # analyze with anova
@@ -511,6 +519,10 @@ Not only do we find that there is no significant difference in *wpm* between non
 # summary of all linear hypotheses
 summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
 ```
+
+
+***
+
 
 # Conclusion
 
