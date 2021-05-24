@@ -1,14 +1,10 @@
 ---
 title: "Project2_McCants"
 author: "Taylor McCants"
-date: "5/22/2021"
+date: "16/5/2021"
 output: html_document
 ---
 
-
-# Project 2 Data Analysis 
-
-Within this part we will analyze the data set and try to answer the two research questions.
 
 ## Setup ##
 
