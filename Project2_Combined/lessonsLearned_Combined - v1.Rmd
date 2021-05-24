@@ -32,7 +32,7 @@ install.packages(setdiff(required_packages, rownames(installed.packages())))
 * The data wrangling solution created was effective and helpful to include in the final combined project. It consisted of reading all the csv files in the /log directory and parsing *user_id* and *condition* from the filenames of the .csv. And finally joining them together with the *participant_info.csv*
 * There were many different visualizations included to enhance the descriptive statistics portion of the assignment.
 *  The violin plots that are used to visualize the data come in very handy since they include a lot of information with the incorporated box plots as well. Also the mean that is added to these plots makes it very easy to compare the median and mean against each other
-![](typingStyle_WPM.png)
+![](wpmByTypingStyleAndCondition.png)
 
 
   

@@ -44,7 +44,7 @@ Before we can jump into the analysis we start by installing the required package
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
 # define packages
-packages <- c("tidyverse","lme4","multcomp","broom.mixed","lmerTest","ggplot2","plyr","lsm","lsmeans","car","stringr","PearsonDS", "ARTool", "qqplotr", "psych", "moments")
+packages <- c("tidyverse","lme4","multcomp","broom.mixed","lmerTest","ggplot2","plyr","lsm","lsmeans","car","stringr","qqplotr", "moments")
 
 # install packages when they are not already included
 install.packages(setdiff(packages, rownames(installed.packages())))  
@@ -59,7 +59,6 @@ library(lme4)
 library(ggplot2)
 library(broom.mixed)
 library(lmerTest)  
-library(plyr)
 library(lsm)
 library(lsmeans)
 library(car)
@@ -68,13 +67,10 @@ import::from(moments, skewness)
 import::from(MASS,mvrnorm)
 import::from(broom.mixed,tidy)
 import::from(multcomp, glht, mcp, adjusted) 
-import::from(PearsonDS, rpearson)                                   
-import::from(ARTool, art, artlm, art.con)                  
 import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
-import::from(psych, d.ci) 
-import::from(cowplot, plot_grid) 
 import::from(modelr, add_residuals, add_predictions)     
-import::from(car, leveneTest, sigmaHat)
+import::from(car, leveneTest)
+import::from(plyr, ddply)
 ```
 
 ***
@@ -82,28 +78,19 @@ import::from(car, leveneTest, sigmaHat)
 ## Data Processing ##
 
 Next we can start with the data processing.
-First off, we define a helper function `read_log_files` that will help read in all the different log files.
+First off, we define a helper function `readLog` which takes a file path and parses the filename and data of the file.
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
-regex_parse <- "User([\\d]*)_[^_]*_([^\\.]*)\\.csv"
+regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
 # helper function to read in log files
 readLog <- function(fileName) {
-  csv_data <- read_csv(str_c('./log/', fileName))
-  userId <- as.double(str_replace(fileName, regex_parse, "\\1"))
-  logData <-
-    csv_data %>%
-    mutate(
-      length = str_length(csv_data$stimulus),
-      user_id = userId,
-      condition = str_replace(fileName, regex_parse, "\\2"),
-      typing_style = if_else(isTouchTypist(userId), "Non-touchtypist", "Touchtypist")
-    ) %>%
-    group_by(stimulus_index) %>%
-    filter(input_time_ms == max(input_time_ms)) %>%
-    mutate(wpm = ((length - 1) / 5) / input_time_ms * 60000) %>%
-    select(c(stimulus_index, wpm, user_id, condition, typing_style))
-  return(logData)
+    csv_data <- read_csv(str_c('./log/',fileName)) %>% 
+      mutate(length = str_length(stimulus)) %>% 
+      group_by(stimulus_index) %>% 
+      summarise(wpm = (as.double(max(length)-1)/5)/ as.double(max(input_time_ms)) * 60000, length = max(length)) %>% 
+      mutate(user_id = as.numeric(str_replace(fileName, regex_parse, "\\1")), condition = str_replace(fileName, regex_parse, "\\3"))
+    return(csv_data)
 }
 ```
 
@@ -114,10 +101,6 @@ Thereafter, we define all the existing log files (`log_files`) and and the csv c
 log_files <- list.files('./log')
 # file that includes the participant information
 participant_info <- read_csv("participant_info.csv")
-isTouchTypist <- function(userId) {
-  s <- participant_info %>% filter(user_id == userId) %>% slice(1)
-  return(s$is_touchtypist)
-}
 # backup file that is already processed
 # combined_log_background <- read_csv(("combined_log_background.csv"))
 ```
@@ -126,12 +109,12 @@ Now we are ready to process the log files and create the data we need.
 
 ```{r, results='hide', message=FALSE,}
 # data wrangling
-data <- tribble(~ user_id,  ~ wpm, ~ condition, ~ typing_style, ~ stimulus_index)
-for (file in log_files) {
-  data <- data %>% add_row(readLog(file))
-}
-# ? TODO add comment
-data    <- data    %>% mutate(typing_style = factor(typing_style, levels = c("Touchtypist", "Non-touchtypist")))
+data <- as_tibble_col(lapply(log_files, readLog), col='nested') %>% 
+        unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
+        mutate(typing_style = if_else(is_touchtypist, 'Touchtypist', 'Non-touchtypist')) %>% 
+        select(-is_touchtypist, -length) %>% 
+        mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
+
 ```
 
 > Note that the *IV stimulus type* is now referred to as *condition* in our data set with the same three levels (*Sentences, Random, Mix*).
@@ -516,12 +499,64 @@ Both the boxplot and the line plot corroborate our findings.
 
 ## Modelling and Testing Assumptions ##
 
-### Modelling ###
-
 After exploring and visualizing the data, we can first set up our model and then take a look at it. We will set up a linear mixed model. In our case, we have multiple users. The variable typing_style is a between subjects variable and the variable condition is a within subjects variable. Furthermore we have multiple trials, whereby the variable is called stimulus_index. We are trying to predict words per minute. As a quick note: Mixed models have much larger degrees of freedom.
 ```{r, echo=T, warning=FALSE}
 model <- lmer(wpm ~ (typing_style*condition)/stimulus_index+(1|user_id),data=data)
+
 ```
+
+We now test the statistical assumptions of the model. For this, we run the shapiro-wilk normality test and the levene test to check the homoscedasticity assumption. We expect high p-values which represent a non-violation.
+```{r, echo=T, warning=FALSE}
+shapiro.test(residuals(model))
+leveneTest(residuals(model) ~ data$typing_style, center = "median")
+```
+
+For the Levene test we find that we do not reject the homoscedasticity assumption.
+For the Shapiro test, the p-value is extremely small and therefore the test reports a violation. Since our data set is rather large, and the shapiro-wilk test is prone to report false-negatives with large data sets, we further explore the normality of residuals with different charts. 
+In the QQ-Plot, we find a slight deviation from the QQ-Band at around 25. However, because the sample size is very large, we can also see, that the QQ-Band is rather narrow.
+
+```{r}
+data%>%
+add_residuals(model)%>%
+add_predictions(model)%>%
+ggplot(aes(sample = resid)) +
+stat_qq_band() +
+stat_qq_line() +
+stat_qq_point(alpha = 0.5) +
+labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
+```
+
+
+If we have a look at the histogram of the residuals, we can see the slight skewness at about 25 as well. Overall, the distribution of residuals is still very close to a normal distribution. 
+```{r}
+ggplot(data = data, aes(x = residuals(model))) +
+    geom_histogram(fill = 'steelblue', color = 'black', bins=40) +
+    labs(title = 'Histogram of Residuals', x = 'Residuals', y = 'Frequency')
+```
+
+Nonetheless, we can explore how a log transformation affects the histogram and the QQ-Plot of residuals. We find that the transformation violates the normality assumption more than the non-transformed model. Therefore, we stick with our initial model.
+
+```{r}
+
+model_log <- lmer(log(wpm) ~ (typing_style*condition)/stimulus_index+(1|user_id),data=data)
+
+ggplot(data = data, aes(x = residuals(model_log))) +
+    geom_histogram(fill = 'steelblue', color = 'black') +
+    labs(title = 'Histogram of Residuals', x = 'Residuals', y = 'Frequency')
+```
+
+
+```{r}
+data%>%
+add_residuals(model_log)%>%
+add_predictions(model_log)%>%
+ggplot(aes(sample = resid)) +
+stat_qq_band() +
+stat_qq_line() +
+stat_qq_point(alpha = 0.5) +
+labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
+```
+
 
 What we find in the model, is that the effect on typing style is not significant and neither is the effect on the interaction term typing style * condition. The condition itself however does show a significant effect. 
 ```{r, echo=T, warning=FALSE}
@@ -555,61 +590,9 @@ Not only do we find that there is no significant difference in WPM between non-t
 summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
 ```
 
-### Testing Statistical Assumptions ###
+## Conclusion
 
-To test statistical assumptions, we begin by adding the residuals and predictions and create the residual versus prediction plot. There seems to be a wide range in residuals.
-```{r, echo=T, warning=FALSE}
-data%>%
-add_residuals(model)%>%
-add_predictions(model)%>%
-ggplot(aes(x = pred, y = resid)) +
-geom_hline(yintercept = 0, linetype = "dotted") +
-geom_point(alpha = 0.5) +
-labs(title = "Residual Prediction Plot")
-```
-
-Next, we can create a QQ plot. There seem to be quite some points that are out of bounds.
-```{r, echo=T, warning=FALSE}
-data%>%
-add_residuals(model)%>%
-add_predictions(model)%>%
-ggplot(aes(sample = resid)) +
-stat_qq_band() +
-stat_qq_line() +
-stat_qq_point(alpha = 0.5) +
-labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
-```
-
-Next we run a Shapiro test and a Levene test. We find that for the Shapiro test the p-value is extremely small and therefore the normality assumption is highly likely to be violated. For the Levene test we find that we do not reject the homoscedasticity assumption.
-```{r, echo=T, warning=FALSE}
-shapiro.test(residuals(model))
-leveneTest(residuals(model) ~ data$typing_style, center = "median")
-```
-
-### Model Transformation ###
-
-Then we can do the log-transformation. We do this by taking the log of WPM.
-```{r, echo=T, warning=FALSE}
-model_log <- lmer(log(wpm) ~ (typing_style*condition)/stimulus_index+(1|user_id),data=data)
-```
-
-### Re-Testing Statistical Assumptions ###
-
-We re-run the Shapiro test and find that linearity assumptions are still not given.
-```{r, echo=T, warning=FALSE}
-shapiro.test(residuals(model_log))
-```
-
-Next we can run the GLHT.
-```{r, echo=T, warning=FALSE}
-model_log %>% 
-  glht(mcp(typing_style = "Tukey")) %>% 
-  tidy(conf.int = TRUE) %>% 
-  mutate(
-    conf.low = exp(conf.low),
-    conf.high = exp(conf.high),
-    estimate = exp(estimate)) 
-```
+After exploring and analyzing our data, we have not seen a significant effect on word per minute for different typing styles. When looking at condition and typing style, we also don't find a significant effect on WPM. Still, it has to be noted that the condition itself shows a significant effect on the resulting WPM.
 
 ***
 
