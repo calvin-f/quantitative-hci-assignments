@@ -1,9 +1,11 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-##Imports
+## Imports
 ```{r, results = 'hide'}
 library('tidyverse')
 library(lme4)
@@ -19,7 +21,7 @@ import::from(car, leveneTest, sigmaHat)                             # install.pa
 ```
 
 
-##Dataset construction
+## Dataset construction
 ```{r, message=FALSE}
 regex_parse <- "User([\\d]*)_[^_]*_([^\\.]*)\\.csv"
 
@@ -60,7 +62,7 @@ data    <- data    %>% mutate(typing_style = factor(typing_style, levels = c("To
 
 ```
 
-##Categorical - from lecture 08 / 09
+## Categorical - from lecture 08 / 09
 
 ```{r}
 #   step 2: specification of the linear models
@@ -119,11 +121,10 @@ model %>%
   summary(test = adjusted("holm")) %>%
   tidy()
 
-summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
 ```
 
 
-##From lecture 10
+## From lecture 10
 ```{r}
 m2_data <- lm(wpm ~ typing_style, data = data)
 ```
