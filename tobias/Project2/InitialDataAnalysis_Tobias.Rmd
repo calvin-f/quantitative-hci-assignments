@@ -1,7 +1,7 @@
 ---
 title: ' QHCI 2021 - Project 2'
-author: 'Group 4'
-date: "25.05.2021"
+author: ' Tobias Boner (17-707-878)'
+date: "12.05.2021"
 output:
   html_document:
     df_print: paged
@@ -16,7 +16,7 @@ The aim of the data analysis will be to answer the following to research questio
 
 * *RQ2: How much does the result from RQ1 influenced by whether the participants type known-words or random string?*
 	
-The analysis will base on the **within-subject design** (with repeated trials) of the study including **one independent variable *(IV)* ** that has **three levels**.
+The analysis will base on the **within-subject design** of the study including **one independent variable *(IV)* ** that has **three levels**.
 The **IV  *stimulus tpye* ** refers to the type of string users had to type in for the transcription and has three levels:
 
 * *sentences*: easy regular sentences
@@ -25,13 +25,6 @@ The **IV  *stimulus tpye* ** refers to the type of string users had to type in f
 
 For the experiments they used a **randomized order** for the three *stimulus types*.
 
-# Theoretical Background 
-
-The Feit (2006) paper compares typing of self-taught typists (or everyday typists or non-touch typists) to touch typists (those that took a typing course and are trained on ten-finger touch typing system). It does not seem to be the case that everyday typists are inferior in their typing skills/performance.
-
-They conducted three types of tasks: easy sentences of commonly used words (sentences), random letter strings (random) and a mix of those two (mix). Thirty typists participated. They captured key press data (keyboard logging), motion capture data (the position of each finger at and between keystrokes) and eye tracking/attention data (with eye-tracking glasses). The experiment followed a within-subject design.
-
-The paper does not find a significant difference in words-per-minute performance between touch typists (57.8 WPM) and non-touch typists (58.93 WPM). Touch typists and non-touch typists seem to have comparable speed. When typing random letter sequences the paper finds that entry rate dropped on average by around 50% compared to the sentences condition. The change was similar across both groups, with no significant difference between their performances in the random condition.
 
 
 # Data Analysis 
@@ -40,37 +33,26 @@ Within this part we will analyze the data set and try to answer the two research
 
 ## Setup 
 
-Before we can jump into the analysis we start by installing the required packages.
+Before we can jump in the analysis we start with setting up the required dependencies for this R notebook.
 
 ```{r, results='hide', message=FALSE, warning=FALSE}
 # define packages
-packages <- c("tidyverse","lme4","multcomp","broom.mixed","lmerTest","ggplot2","plyr","lsm","lsmeans","car","stringr","qqplotr", "moments")
+required_packages <- c("tidyverse", "readr", "ggplot2", "stringr")
 
 # install packages when they are not already included
-install.packages(setdiff(packages, rownames(installed.packages())))  
+install.packages(setdiff(required_packages, rownames(installed.packages())))  
 ```
 
-To finish the setup we need to load the packages fo finish the setup. 
+Then load the packages to finish the setup
 
-```{r, results='hide',warning=FALSE, message=FALSE}
+```{r, results='hide', message=FALSE,  warning=FALSE}
 # load the packages
 library(tidyverse)
-library(lme4)
+library(readr)
 library(ggplot2)
-library(broom.mixed)
-library(lmerTest)  
-library(lsm)
-library(lsmeans)
-library(car)
 library(stringr)
-import::from(moments, skewness)
-import::from(MASS,mvrnorm)
-import::from(broom.mixed,tidy)
-import::from(multcomp, glht, mcp, adjusted) 
-import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
-import::from(modelr, add_residuals, add_predictions)     
-import::from(car, leveneTest)
-import::from(plyr, ddply)
+
+
 ```
 
 ***
@@ -78,14 +60,15 @@ import::from(plyr, ddply)
 ## Data Processing ##
 
 Next we can start with the data processing.
-First off, we define a helper function `readLog` which takes a file path and parses the filename and data of the file.
+First of, we define a helper function `read_log_files` that will help read in all the different log files.
 
 ```{r, message=FALSE}
 # Regular expression to help parse the log files
 regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
+
 # helper function to read in log files
-readLog <- function(fileName) {
-    csv_data <- read_csv(str_c('./log/',fileName)) %>% 
+read_log_files <- function(fileName){
+  csv_data <- read_csv(str_c('./log/',fileName)) %>% 
       mutate(length = str_length(stimulus)) %>% 
       group_by(stimulus_index) %>% 
       summarise(wpm = (as.double(max(length)-1)/5)/ as.double(max(input_time_ms)) * 60000, length = max(length)) %>% 
@@ -99,22 +82,25 @@ Thereafter, we define all the existing log files (`log_files`) and and the csv c
 ```{r, results='hide', message=FALSE, }
 # list of all log files
 log_files <- list.files('./log')
+
 # file that includes the participant information
 participant_info <- read_csv("participant_info.csv")
+
 # backup file that is already processed
-# combined_log_background <- read_csv(("combined_log_background.csv"))
+combined_log_background <- read_csv(("combined_log_background.csv"))
 ```
 
 Now we are ready to process the log files and create the data we need.
 
 ```{r, results='hide', message=FALSE,}
 # data wrangling
-data <- as_tibble_col(lapply(log_files, readLog), col='nested') %>% 
+data <- as_tibble_col(lapply(log_files, read_log_files), col='nested') %>% 
         unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
-        mutate(typing_style = if_else(is_touchtypist, 'Touchtypist', 'Non-touchtypist')) %>% 
-        select(-is_touchtypist, -length) %>% 
-        mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
+        mutate(typing_style = if_else(is_touchtypist, 'Non-touchtypist', 'Touchtypist')) %>% 
+        select(-is_touchtypist, -length)
 
+# ? TODO add comment
+data_with_cond <- data %>% mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
 ```
 
 > Note that the *IV stimulus type* is now referred to as *condition* in our data set with the same three levels (*Sentences, Random, Mix*).
@@ -136,7 +122,7 @@ Next we check the structure of the data object with `str(data)` and can see the 
 ```{r, echo=FALSE}
 str(data)
 ```
-Out data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
+Our data set contains `r ncol(data)` columns (*`r colnames(data)`*) and `r nrow(data)` rows for `r n_distinct(data$user_id)` different users.
 
 
 
@@ -280,10 +266,6 @@ data %>%
  hist(main=sprintf("Distribution of wpms for the %s typing_style", colnames(min_wpm_by_typing_style[2])), xlab="Words per minute (wpms)", xlim=c(rounded_min, rounded_max), breaks=nr_of_bins, col="grey")
 ```
 
-```{r}
-# r function for skewness
-by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
-```
 
 
 
@@ -293,9 +275,9 @@ by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
 
 
 
-#### **RQ2 - words per minute (wpm) by typing style and condition (stimulus type)**
+#### **RQ2 - words per minute (wpm) by condition (stimulus type)**
 
-We begin by taking a look at condition on its own. We create the same plot again for *words per minute (wpm)* by the different *conditions*.
+With RQ2 in mind we create the same plot again for *words per minute (wpm)* by the different *conditions*.
 
 ```{r, echo=FALSE, warning=FALSE}
 # violin plot including boxplots displaying words per minute (wpm) for the three conditions
@@ -312,7 +294,8 @@ data %>%
   guides(fill=guide_legend(title="Condition"))
 ```
 
-In contrast to the visualization before, in this case we immediately see that the violin and boxplots appear quite different with regards to the *conditions* and *word per minutes (wpm)*. We see that random characters/words seem to lead to the lowest WPM performance, while known sentences show the highest WPM performance. The mix condition, as to be expected, lies between the two conditions, random and sentences. Next, we can take a look at the numbers.
+In contrast to the visualization before, in this case we immediately see that the violin and boxplots appear quite different with regards to the *conditions* and *word per minutes (wpm)*. Hence we should again have a closer look at the numbers again.
+
 
 **Non-Parametric Statistics**
 
@@ -356,7 +339,7 @@ The `median`, `min`, `max`, as well as the `IQR` this time show significant diff
 
 
 * Condition `r colnames(max_wpm_by_condition[1])`:
-  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r `median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
   + But these users had a very small spread which is by the  `IQR of` (`r iqr_wpm_by_condition[[1]]`) that is lower than the others.
 
 * Condition `r colnames(max_wpm_by_condition[2])`:
@@ -457,144 +440,34 @@ data %>%
 ```
 
 
-After looking at *condition* on its own, we turn to the interaction of typing style and condition. We create the violin plot for *words per minute (wpm)* by the different *typing styles* and *conditions*. We find that even across conditions there do not seem to be significant differences between non-touchtypists and touchtypists in WPM. These findings all seem to back the Feit (2006) paper.
-```{r, echo=FALSE, warning=FALSE}
-ggplot(data, aes(x=typing_style, y=wpm,fill=condition)) + 
-  geom_violin() + 
-  geom_boxplot(aes(fill=condition), width = 0.15,position=position_dodge(0.9)) +
-  scale_fill_brewer(palette="Blues") + 
-  theme_classic() +
-  labs(title="Plot of Words Per Minute (WPM) by Typing Style and Condition",x="Typing Style", y = "Words Per Minute (WPM)") +
-  guides(fill=guide_legend(title="Condition"))
-```
+***
 
-For the mean WPM by typing style and condition, we see, as in the plots that there is not a large difference between non-touchtypists and touchtypists. While for each condition the touchtypists are slightly better than non-touchtypists, this difference is very small (between one and two words per minute on average).
-```{r, echo=FALSE, warning=FALSE}
-ddply(data, ~ typing_style*condition,function(data) summary(data$wpm))
-```
 
-We can also take a look at the typing style * condition distributions with the help of histogram plots.
-```{r, echo=T}
-hist(data[data$typing_style=='Non-touchtypist' & data$condition=='Random',]$wpm)
-hist(data[data$typing_style=='Non-touchtypist' & data$condition=='Mix',]$wpm)
-hist(data[data$typing_style=='Non-touchtypist' & data$condition=='Sentences',]$wpm)
-hist(data[data$typing_style=='Touchtypist' & data$condition=='Random',]$wpm)
-hist(data[data$typing_style=='Touchtypist' & data$condition=='Mix',]$wpm)
-hist(data[data$typing_style=='Touchtypist' & data$condition=='Sentences',]$wpm)
-```
+### Statistical Assumptions ###
 
-We can also take a look at the typing style * condition boxplot.
-```{r, echo=T}
-boxplot(wpm ~ typing_style*condition,data=data,xlab='TypingStyle.Condition',ylab='WPM')
-```
+TODO: include inferential statistics here already?
 
-Finally, we can create a line plot.
-```{r, echo=T}
-with(data,interaction.plot(condition,typing_style,wpm,ylim=c(0,max(data$wpm))))
-```
-
-Both the boxplot and the line plot corroborate our findings.
 
 ***
 
-## Modelling and Testing Assumptions ##
 
-After exploring and visualizing the data, we can first set up our model and then take a look at it. We will set up a linear mixed model. In our case, we have multiple users. The variable typing_style is a between subjects variable and the variable condition is a within subjects variable. Furthermore we have multiple trials, whereby the variable is called stimulus_index. We are trying to predict words per minute. As a quick note: Mixed models have much larger degrees of freedom.
-```{r, echo=T, warning=FALSE}
-model <- lmer(wpm ~ (typing_style*condition)/stimulus_index+(1|user_id),data=data)
+## Data Variation & Validity ##
 
-```
+### Linear Model ###
 
-We now test the statistical assumptions of the model. For this, we run the shapiro-wilk normality test and the levene test to check the homoscedasticity assumption. We expect high p-values which represent a non-violation.
-```{r, echo=T, warning=FALSE}
-shapiro.test(residuals(model))
-leveneTest(residuals(model) ~ data$typing_style, center = "median")
-```
+test columns using inferential statistics
 
-For the Levene test we find that we do not reject the homoscedasticity assumption.
-For the Shapiro test, the p-value is extremely small and therefore the test reports a violation. Since our data set is rather large, and the shapiro-wilk test is prone to report false-negatives with large data sets, we further explore the normality of residuals with different charts. 
-In the QQ-Plot, we find a slight deviation from the QQ-Band at around 25. However, because the sample size is very large, we can also see, that the QQ-Band is rather narrow.
+#### Construct Linear Model ####
 
-```{r}
-data%>%
-add_residuals(model)%>%
-add_predictions(model)%>%
-ggplot(aes(sample = resid)) +
-stat_qq_band() +
-stat_qq_line() +
-stat_qq_point(alpha = 0.5) +
-labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
-```
+#### Model-fit Assessment ####
+
+#### Estimations ####
+
+#### Test Statistical Assumptions for the model ####
 
 
-If we have a look at the histogram of the residuals, we can see the slight skewness at about 25 as well. Overall, the distribution of residuals is still very close to a normal distribution. 
-```{r}
-ggplot(data = data, aes(x = residuals(model))) +
-    geom_histogram(fill = 'steelblue', color = 'black', bins=40) +
-    labs(title = 'Histogram of Residuals', x = 'Residuals', y = 'Frequency')
-```
+## Results ##
 
-Nonetheless, we can explore how a log transformation affects the histogram and the QQ-Plot of residuals. We find that the transformation violates the normality assumption more than the non-transformed model. Therefore, we stick with our initial model.
-
-```{r}
-
-model_log <- lmer(log(wpm) ~ (typing_style*condition)/stimulus_index+(1|user_id),data=data)
-
-ggplot(data = data, aes(x = residuals(model_log))) +
-    geom_histogram(fill = 'steelblue', color = 'black') +
-    labs(title = 'Histogram of Residuals', x = 'Residuals', y = 'Frequency')
-```
-
-
-```{r}
-data%>%
-add_residuals(model_log)%>%
-add_predictions(model_log)%>%
-ggplot(aes(sample = resid)) +
-stat_qq_band() +
-stat_qq_line() +
-stat_qq_point(alpha = 0.5) +
-labs(x = "Theoretical Quantiles", y = "Sample Quantiles", title = "Quantile Plot")
-```
-
-
-What we find in the model, is that the effect on typing style is not significant and neither is the effect on the interaction term typing style * condition. The condition itself however does show a significant effect. 
-```{r, echo=T, warning=FALSE}
-anova(model,type=3,test.statistic="F")
-```
-
-We can create a model summary.
-```{r, echo=T, warning=FALSE}
-summary(model)
-```
-
-We can also check out the confidence intervals.
-```{r, echo=T, warning=FALSE}
-confint(model)
-```
-
-The GLHT shows that there is no significant difference between touchtypists and non touchtypists. 
-```{r, echo=T, warning=FALSE}
-model %>%
-  glht(mcp(typing_style = "Tukey")) %>%
-  tidy(conf.int = TRUE)
-
-model %>%
-  glht(mcp(typing_style = "Tukey")) %>%
-  summary(test = adjusted("holm")) %>%
-  tidy()
-```
-
-Not only do we find that there is no significant difference in WPM between non-touchtypists and touchtypists, we also find that this does not change when looking and random strings and sentences. Neither "Non-touchtypist Random" - "Touchtypist Random" == 0 nor "Non-touchtypist Sentences" - "Touchtypist Sentences" == 0 turn out to be significant.
-```{r, echo=T, warning=FALSE}
-summary(glht(model,lsm(pairwise~typing_style*condition,pbkrtest.limit = 4493)))
-```
-
-## Conclusion
-
-After exploring and analyzing our data, we have not seen a significant effect on word per minute for different typing styles. When looking at condition and typing style, we also don't find a significant effect on WPM. Still, it has to be noted that the condition itself shows a significant effect on the resulting WPM.
-
-***
 
 
 
