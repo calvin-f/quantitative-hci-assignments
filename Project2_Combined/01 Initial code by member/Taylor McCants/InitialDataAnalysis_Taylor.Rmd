@@ -1,0 +1,278 @@
+---
+title: "Project2_McCants"
+author: "Taylor McCants"
+date: "14/5/2021"
+output: html_document
+---
+
+
+## Setup ##
+
+```{r, results='hide', message=FALSE,  warning=FALSE}
+# load the packages
+library(tidyverse)
+library(lme4)
+library(ggplot2)
+library(broom.mixed)
+library(lmerTest)  
+library(plyr)
+library(lsm)
+library(car)
+library(stringr)
+additional_packages <- c("multcomp", "PearsonDS", "ARTool", "qqplotr", "psych", "moments")
+install.packages(setdiff(additional_packages, rownames(installed.packages())))  
+import::from(moments, skewness)
+import::from(MASS,mvrnorm)
+import::from(broom.mixed,tidy)
+import::from(multcomp, glht, mcp, adjusted) 
+import::from(PearsonDS, rpearson)                                   
+import::from(ARTool, art, artlm, art.con)                  
+import::from(qqplotr, stat_qq_line, stat_qq_point, stat_qq_band) 
+import::from(psych, d.ci) 
+import::from(cowplot, plot_grid) 
+import::from(modelr, add_residuals, add_predictions)     
+import::from(car, leveneTest, sigmaHat)
+```
+
+***
+
+## Data Processing ##
+
+Read the data files.
+
+```{r, message=FALSE}
+# Regular expression to help parse the log files
+regex_parse <- "User(\\d+)_T(\\d+)_(.*).csv"
+
+# helper function to read in log files
+read_log_files <- function(fileName){
+  csv_data <- read_csv(str_c('./log/',fileName)) %>% 
+      mutate(length = str_length(stimulus)) %>% 
+      group_by(stimulus_index) %>% 
+      summarise(wpm = (as.double(max(length)-1)/5)/ as.double(max(input_time_ms)) * 60000, length = max(length)) %>% 
+      mutate(user_id = as.numeric(str_replace(fileName, regex_parse, "\\1")), condition = str_replace(fileName, regex_parse, "\\3"))
+    return(csv_data)
+}
+# list of all log files
+log_files <- list.files('./log')
+
+# file that includes the participant information
+participant_info <- read_csv("participant_info.csv")
+
+# backup file that is already processed
+combined_log_background <- read_csv(("combined_log_background.csv"))
+
+# data wrangling
+data <- as_tibble_col(lapply(log_files, read_log_files), col='nested') %>% 
+        unnest(nested) %>% merge(y=participant_info, by='user_id', all.x = TRUE ) %>% 
+        mutate(typing_style = if_else(is_touchtypist, 'Non-touchtypist', 'Touchtypist')) %>% 
+        select(-is_touchtypist, -length)
+
+# ? TODO add comment
+data_with_cond <- data %>% mutate(condition = factor(condition, levels = c("Sentences", "Mix", "Random")), typing_style = factor(typing_style, levels = c("Non-touchtypist", "Touchtypist")))
+```
+
+
+## Data Exploration and Description
+
+Overview of data:
+```{r, echo=FALSE}
+head(data)
+```
+```{r, echo=FALSE}
+str(data)
+```
+
+
+### Visualize Descriptive Statisctics 
+
+Summary of the data
+
+```{r, echo=FALSE}
+summary(data)
+```
+Violin plot that includes boxplots for *words per minute (wpm)* by the *typing styles* of users.
+
+```{r, echo=FALSE}
+# violin plot including boxplots displaying words per minute (wpm) for the two typing styles
+data %>% 
+  ggplot(aes(x=typing_style, y=wpm, fill=typing_style)) + 
+    geom_violin() + 
+    geom_boxplot(width=0.1) +
+    scale_fill_brewer(palette="PuRd") + 
+    theme_minimal() +
+    labs(title="Words per Minute per Typing Style",x="Typing Style", y = "Words Per Minute (WPM)") +
+    guides(fill=guide_legend(title="Typing Style"))
+```
+
+Based on the graph above, there is not much difference between the two *typing styles* with regards to *words per minutes (wpm)*. The same is shown in the numbers table above.
+
+**Non-Parametric Statistics**
+
+```{r, echo=FALSE}
+# median of wpm per typing style
+median_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = median) %>%
+  rbind() %>%
+  as_tibble()
+
+# min of wpm per typing style
+min_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = min) %>%
+  rbind() %>%
+  as_tibble()
+
+# max of wpm per typing style
+max_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = max) %>%
+  rbind() %>%
+  as_tibble()
+
+# IQR of wpm per typing style
+iqr_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = IQR) %>%
+  rbind() %>%
+  as_tibble()
+```
+
+
+* Median: Nontouchtypist = `r median_wpm_by_typing_style[[1]]` *wpms*, Touchtypist = `r median_wpm_by_typing_style[[2]]` *wpms*
+* Interval: Nontouchtypist = (min= `r min_wpm_by_typing_style[[1]]` *wpms*, max=`r max_wpm_by_typing_style[[1]]` *wpms*), Touchtypist = (min=`r min_wpm_by_typing_style[[2]]` *wpms*, max=`r max_wpm_by_typing_style[[2]]` *wpms*)
+* Interquartile Range (IQR) : The `IQR` of Nontouchtypists = `r iqr_wpm_by_typing_style[[1]]` and Touchtypists = `r iqr_wpm_by_typing_style[[2]]`.
+
+The differences in median, interval, and IQR is very small, further showing that there is not a significant difference in the results from Nontouchtypist and Touchtypist.
+
+**Parametric Statistics**
+
+```{r, echo=FALSE}
+# mean of wpm per typing style
+mean_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = mean) %>%
+  rbind() %>%
+  as_tibble()
+
+# variation of wpm per typing style
+var_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = var) %>%
+  rbind() %>%
+  as_tibble()
+
+# standard deviation of wpm per typing style
+sd_wpm_by_typing_style <- by(data = data$wpm, INDICES = data$typing_style, FUN = sd) %>%
+  rbind() %>%
+  as_tibble()
+```
+
+
+* Mean: `r colnames(mean_wpm_by_typing_style[1])` = `r mean_wpm_by_typing_style[[1]]` *wpms*, `r colnames(mean_wpm_by_typing_style[2])` = `r mean_wpm_by_typing_style[[2]]` *wpms*
+* Spread: Variance of `r colnames(min_wpm_by_typing_style[1])` = `r var_wpm_by_typing_style[[1]]`, Variance of `r colnames(var_wpm_by_typing_style[2])` = `r var_wpm_by_typing_style[[2]]`.
+* Standard deviation: `r colnames(sd_wpm_by_typing_style[1])` = `r sd_wpm_by_typing_style[[1]]`, `r colnames(sd_wpm_by_typing_style[2])` = `r sd_wpm_by_typing_style[[2]]`
+
+All of the values above show that they conditions are very similar.
+
+```{r}
+# r function for skewness
+by(data = data$wpm, INDICES = data$typing_style, FUN = skewness)
+```
+
+
+
+
+#### **RQ2 - words per minute (wpm) by condition**
+
+With RQ2 in mind we create the same plot again for *words per minute (wpm)* by the different *conditions*.
+
+```{r, echo=FALSE, warning=FALSE}
+# violin plot including boxplots displaying words per minute (wpm) for the three conditions
+data %>% 
+ ggplot(aes(x=condition, y=wpm, fill=condition)) + 
+  geom_violin() + 
+  geom_boxplot(width=0.1) +
+  scale_fill_brewer(palette="PuRd") + 
+  theme_minimal() +
+  labs(title="Words Per Minute (WPM) by Condition",x="Condition", y = "Words Per Minute (WPM)") +
+  guides(fill=guide_legend(title="Condition"))
+```
+
+In contrast to the visualization before, in this case we immediately see that the violin and boxplots appear quite different with regards to the *conditions* and *word per minutes (wpm)*.
+
+
+**Non-Parametric Statistics**
+
+```{r, echo=FALSE}
+# median of wpm per typing style
+median_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = median) %>%
+  rbind() %>%
+  as_tibble()
+
+# min of wpm per typing style
+min_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = min) %>%
+  rbind() %>%
+  as_tibble()
+
+# max of wpm per typing style
+max_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = max) %>%
+  rbind() %>%
+  as_tibble()
+
+# IQR of wpm per typing style
+iqr_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = IQR) %>%
+  rbind() %>%
+  as_tibble()
+
+```
+
+
+* Median: `r colnames(median_wpm_by_condition[1])` = `r median_wpm_by_condition[[1]]` *wpms*, `r colnames(median_wpm_by_condition[2])` = `r median_wpm_by_condition[[2]]` *wpms*, `r colnames(median_wpm_by_condition[3])` = `r median_wpm_by_condition[[3]]` *wpms*.
+
+* Interval: `r colnames(min_wpm_by_condition[1])` = (min=`r min_wpm_by_condition[[1]]` *wpms*, max=`r max_wpm_by_condition[[1]]` *wpms*), `r colnames(min_wpm_by_condition[2])` =(min=`r min_wpm_by_condition[[2]]` *wpms*, max=`r max_wpm_by_condition[[2]]` *wpms* ), and  `r colnames(min_wpm_by_condition[3])`=(min=`r min_wpm_by_condition[[3]]` *wpms*, max=`r max_wpm_by_condition[[3]]` *wpms*)
+  
+* IQR:  `r colnames(iqr_wpm_by_condition[1])` = `r iqr_wpm_by_condition[[1]]`,  `r colnames(iqr_wpm_by_condition[2])` = `r iqr_wpm_by_condition[[2]]`, `r colnames(iqr_wpm_by_condition[3])` = `r iqr_wpm_by_condition[[3]]`.
+
+
+
+The `median`, `min`, `max`, as well as the `IQR` this time show significant differences that are also obvious in the visualizations. Upon these we can already make a statement about RQ2.
+
+
+* Condition `r colnames(max_wpm_by_condition[1])`:
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[1])` were the slowest compared to the other conditions. This shows in the lowest `median` (`r `median_wpm_by_condition[[1]]`), `min`(`r min_wpm_by_condition[[1]]`) and `max` (`r max_wpm_by_condition[[1]]`) values. 
+  + But these users had a very small spread which is by the  `IQR of` (`r iqr_wpm_by_condition[[1]]`) that is lower than the others.
+
+* Condition `r colnames(max_wpm_by_condition[2])`:
+  + User who had to type strings in `r colnames(iqr_wpm_by_condition[2])` form were faster than `r colnames(iqr_wpm_by_condition[1])` strings but slower than regular `r colnames(iqr_wpm_by_condition[3])`.
+  + They had larger spread indicated by the `IQR of`(`r iqr_wpm_by_condition[[3]]`) but not the largest compared to the others .
+
+* Condition `r colnames(max_wpm_by_condition[3])`:
+  + User who had to type strings in form of `r colnames(iqr_wpm_by_condition[3])` were the fastest, which is shown in the highest `median`  (`r median_wpm_by_condition[[3]]`), `min`(`r min_wpm_by_condition[[3]]`) and `max` (`r max_wpm_by_condition[[3]]`) values compared to the other conditions. 
+  + Also they had the largest spread indicated by the `IQR of`(`r iqr_wpm_by_condition[[3]]`) that is higher than the others. 
+  
+At this point we can already say that there are obvious differences between the *conditions*.
+
+
+**Parametric Statistics**
+
+```{r, echo=FALSE}
+# mean of wpm per typing style
+mean_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = mean) %>%
+  rbind() %>%
+  as_tibble()
+
+# variation of wpm per typing style
+var_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = var) %>%
+  rbind() %>%
+  as_tibble()
+
+# standard deviation of wpm per typing style
+sd_wpm_by_condition <- by(data = data$wpm, INDICES = data$condition, FUN = sd) %>%
+  rbind() %>%
+  as_tibble()
+
+```
+
+
+* Mean:
+  + For the `r colnames(mean_wpm_by_condition[1])` users have  a `mean` of `r mean_wpm_by_condition[[1]]` *wpms*,  for`r colnames(mean_wpm_by_condition[2])` a `mean` of `r   mean_wpm_by_condition[[2]]`    *wpms* and  for`r colnames(mean_wpm_by_condition[3])` has a `mean` of `r mean_wpm_by_condition[[3]]` *wpms*.
+
+* Spread:
+  + For the variance (`var`), `r colnames(min_wpm_by_condition[1])` has a value of `r var_wpm_by_condition[[1]]`, `r colnames(var_wpm_by_condition[2])` has a value of `r var_wpm_by_condition[[2]]` and  `r colnames(var_wpm_by_condition[3])` has a value of `r var_wpm_by_condition[[3]]`.
+  + Regarding the standard deviation, (`sd`) `r colnames(sd_wpm_by_condition[1])` accounts to `r sd_wpm_by_condition[[1]]`, `r colnames(sd_wpm_by_condition[2])` to `r sd_wpm_by_condition[[2]]` and `r colnames(sd_wpm_by_condition[3])` to `r sd_wpm_by_condition[[3]]`.
+  
+  
+  
+  
+  
+  
